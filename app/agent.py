@@ -4,7 +4,7 @@ def create_agent():
     # Simple agent configuration
     agent = Agent(
         name="SimpleAgent",
-        model="anthropic.claude-3-sonnet-20240229-v1:0", # Example model ID
+        model="jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
         system_prompt="You are a helpful assistant. Answer concisely.",
         tools=[]
     )

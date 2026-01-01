@@ -1,3 +1,4 @@
+# Agent Core Runtime Resource
 resource "aws_bedrockagentcore_agent_runtime" "main" {
   agent_runtime_name = "${var.project_name}_runtime"
   role_arn           = aws_iam_role.agent_role.arn
@@ -16,4 +17,10 @@ resource "aws_bedrockagentcore_agent_runtime" "main" {
     Environment = "dev"
     Project     = var.project_name
   }
+}
+
+# Agent Core Memory Resource
+resource "aws_bedrockagentcore_memory" "main" {
+  name                  = "${var.project_name}_memory"
+  event_expiry_duration = 30
 }
