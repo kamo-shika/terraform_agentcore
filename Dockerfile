@@ -1,9 +1,16 @@
-FROM python:3.14-slim
+FROM python:3.13-slim
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 WORKDIR /var/task
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy dependency files
+COPY pyproject.toml uv.lock ./
+
+# Install dependencies
+RUN uv sync --frozen --no-dev
+
+# Place executables in the environment at the front of the path
+ENV PATH="/var/task/.venv/bin:$PATH"
 
 COPY app/ .
 

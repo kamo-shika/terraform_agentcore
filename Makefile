@@ -8,7 +8,14 @@ ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
 ECR_URL = $(ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com
 IMAGE_URI = $(ECR_URL)/$(REPO_NAME):latest
 
-.PHONY: init plan apply destroy login build push deploy deploy-init
+.PHONY: init plan apply destroy login build push deploy deploy-init setup run-local
+
+# --- Local Development ---
+setup:
+	uv sync
+
+run-local:
+	uv run python app/main.py
 
 # --- Terraform ---
 init:

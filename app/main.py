@@ -19,7 +19,7 @@ def handler(event, context):
         user_input = event.get("input", {}).get("text", "Hello")
         
         # Run the agent
-        response = agent.run(user_input)
+        response = agent(user_input)
         
         return {
             "statusCode": 200,
