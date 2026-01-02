@@ -27,11 +27,14 @@ model: sonnet
 
 ## コーディング規約
 
+- **すべてのコメントとdocstringは日本語で記載**
 - 型ヒントを使用
-- docstringはGoogle style
+- docstringはGoogle style形式（日本語）
 - ロギングは `logging` モジュール使用
 - 例外は具体的にキャッチ
 - 環境変数は `os.getenv()` で取得
+- インラインコメントも日本語（`# S3バケットとオブジェクト情報を抽出`）
+- 変数名・関数名は英語（Pythonの命名規則に従う）
 
 ## 作業開始時
 

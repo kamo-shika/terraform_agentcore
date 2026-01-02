@@ -1,8 +1,8 @@
 """
-Prompt loading utility for external prompt management.
+外部プロンプト管理のためのプロンプト読み込みユーティリティ。
 
-This module provides functions to load prompts from external text files,
-making it easy to modify system prompts without changing code.
+このモジュールは、外部テキストファイルからプロンプトを読み込む関数を提供し、
+コードを変更せずにシステムプロンプトを簡単に修正できるようにします。
 """
 
 import os
@@ -14,17 +14,17 @@ PROMPTS_DIR = Path(__file__).parent
 
 def load_prompt(name: str, **kwargs) -> str:
     """
-    Load a prompt file and substitute variables.
+    プロンプトファイルを読み込み、変数を置換します。
 
     Args:
-        name: Prompt file name (without extension)
-        **kwargs: Variables to substitute in the prompt using {variable} format
+        name: プロンプトファイル名（拡張子なし）
+        **kwargs: {変数名}形式でプロンプト内に置換する変数
 
     Returns:
-        The prompt text with variables substituted
+        変数が置換されたプロンプトテキスト
 
     Raises:
-        FileNotFoundError: If the prompt file doesn't exist
+        FileNotFoundError: プロンプトファイルが存在しない場合
 
     Example:
         >>> prompt = load_prompt("summarize", bucket="my-bucket", key="file.txt")
@@ -37,7 +37,7 @@ def load_prompt(name: str, **kwargs) -> str:
     with open(prompt_path, 'r', encoding='utf-8') as f:
         template = f.read()
 
-    # Substitute variables if provided
+    # 変数が提供されている場合は置換
     if kwargs:
         template = template.format(**kwargs)
 
@@ -46,22 +46,22 @@ def load_prompt(name: str, **kwargs) -> str:
 
 def list_prompts() -> list[str]:
     """
-    List all available prompt names.
+    利用可能なすべてのプロンプト名をリストします。
 
     Returns:
-        List of prompt names (without .txt extension)
+        プロンプト名のリスト（.md拡張子なし）
     """
     return [f.stem for f in PROMPTS_DIR.glob("*.md")]
 
 
 def get_prompt_path(name: str) -> Path:
     """
-    Get the full path to a prompt file.
+    プロンプトファイルのフルパスを取得します。
 
     Args:
-        name: Prompt file name (without extension)
+        name: プロンプトファイル名（拡張子なし）
 
     Returns:
-        Path object for the prompt file
+        プロンプトファイルのPathオブジェクト
     """
     return PROMPTS_DIR / f"{name}.md"

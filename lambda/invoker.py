@@ -1,12 +1,12 @@
 """
-Lambda function to invoke AgentCore Runtime when S3 events are received.
+S3イベントを受信してAgentCore Runtimeを呼び出すLambda関数。
 
-This function:
-1. Receives S3 event notifications
-2. Extracts bucket and object key information
-3. Retrieves user-id from S3 object metadata
-4. Invokes AgentCore Runtime with the S3 object details
-5. Processes the streaming response from the agent
+この関数は以下を実行します：
+1. S3イベント通知を受信
+2. バケット名とオブジェクトキー情報を抽出
+3. S3オブジェクトメタデータからuser-idを取得
+4. S3オブジェクトの詳細情報とともにAgentCore Runtimeを呼び出し
+5. エージェントからのストリーミングレスポンスを処理
 """
 
 import json
@@ -16,33 +16,33 @@ from typing import Dict, Any
 import boto3
 from botocore.exceptions import ClientError
 
-# Configure logging
+# ロギング設定
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Initialize AWS clients
+# AWSクライアントの初期化
 s3_client = boto3.client('s3')
 bedrock_agentcore = boto3.client('bedrock-agentcore')
 
-# Environment variables
+# 環境変数
 AGENT_RUNTIME_ARN = os.environ.get('AGENT_RUNTIME_ARN')
 AGENTCORE_MEMORY_ID = os.environ.get('AGENTCORE_MEMORY_ID')
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Lambda handler function that processes S3 events and invokes AgentCore Runtime.
+    S3イベントを処理してAgentCore Runtimeを呼び出すLambdaハンドラー関数。
 
     Args:
-        event: S3 event notification
-        context: Lambda context object
+        event: S3イベント通知
+        context: Lambdaコンテキストオブジェクト
 
     Returns:
-        Dict containing status and response details
+        ステータスとレスポンス詳細を含む辞書
     """
     logger.info(f"Received event: {json.dumps(event)}")
 
-    # Validate environment variables
+    # 環境変数の検証
     if not AGENT_RUNTIME_ARN:
         error_msg = "AGENT_RUNTIME_ARN environment variable is not set"
         logger.error(error_msg)
@@ -52,7 +52,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         }
 
     try:
-        # Process each S3 record in the event
+        # イベント内の各S3レコードを処理
         results = []
         for record in event.get('Records', []):
             if record.get('eventSource') == 'aws:s3':
@@ -77,16 +77,16 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 def process_s3_record(record: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
-    Process a single S3 record and invoke AgentCore Runtime.
+    単一のS3レコードを処理してAgentCore Runtimeを呼び出します。
 
     Args:
-        record: S3 event record
-        context: Lambda context object
+        record: S3イベントレコード
+        context: Lambdaコンテキストオブジェクト
 
     Returns:
-        Dict containing processing results
+        処理結果を含む辞書
     """
-    # Extract S3 bucket and object information
+    # S3バケットとオブジェクト情報を抽出
     s3_info = record.get('s3', {})
     bucket_name = s3_info.get('bucket', {}).get('name')
     object_key = s3_info.get('object', {}).get('key')
@@ -94,7 +94,7 @@ def process_s3_record(record: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
     logger.info(f"Processing S3 event: {event_name} - s3://{bucket_name}/{object_key}")
 
-    # Get S3 object metadata to extract user-id
+    # S3オブジェクトメタデータからuser-idを取得
     try:
         head_response = s3_client.head_object(Bucket=bucket_name, Key=object_key)
         user_id = head_response.get('Metadata', {}).get('user-id', 'anonymous')
@@ -103,10 +103,10 @@ def process_s3_record(record: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.warning(f"Could not get metadata for {bucket_name}/{object_key}: {e}")
         user_id = 'anonymous'
 
-    # Create session ID based on file path
+    # ファイルパスに基づいてセッションIDを作成
     session_id = f"{bucket_name}/{object_key}".replace('/', '_')
 
-    # Create input payload for the agent with S3 info
+    # S3情報を含むエージェント用の入力ペイロードを作成
     input_payload = {
         "input": {
             "text": f"S3ファイルを処理してください: s3://{bucket_name}/{object_key}"
@@ -119,7 +119,7 @@ def process_s3_record(record: Dict[str, Any], context: Any) -> Dict[str, Any]:
         "actorId": user_id
     }
 
-    # Invoke AgentCore Runtime
+    # AgentCore Runtimeを呼び出し
     try:
         response = invoke_agent_runtime(
             agent_runtime_arn=AGENT_RUNTIME_ARN,
@@ -153,29 +153,29 @@ def invoke_agent_runtime(
     payload: Dict[str, Any]
 ) -> str:
     """
-    Invoke AgentCore Runtime and process the response.
+    AgentCore Runtimeを呼び出してレスポンスを処理します。
 
     Args:
-        agent_runtime_arn: ARN of the AgentCore Runtime
-        session_id: Session identifier for conversation context
-        payload: Input payload to send to the agent
+        agent_runtime_arn: AgentCore RuntimeのARN
+        session_id: 会話コンテキストのセッション識別子
+        payload: エージェントに送信する入力ペイロード
 
     Returns:
-        Complete agent response as string
+        エージェントの完全なレスポンス（文字列）
     """
     logger.info(f"Invoking agent runtime: {agent_runtime_arn}")
     logger.info(f"Session ID: {session_id}")
     logger.info(f"Payload: {json.dumps(payload)}")
 
     try:
-        # Call InvokeAgentRuntime API
+        # InvokeAgentRuntime APIを呼び出し
         response = bedrock_agentcore.invoke_agent_runtime(
             agentRuntimeArn=agent_runtime_arn,
             runtimeSessionId=session_id,
             payload=json.dumps(payload).encode('utf-8')
         )
 
-        # Process streaming response
+        # ストリーミングレスポンスを処理
         event_stream = response.get('completion')
         complete_response = process_event_stream(event_stream)
 
@@ -193,30 +193,30 @@ def invoke_agent_runtime(
 
 def process_event_stream(event_stream) -> str:
     """
-    Process the streaming response from AgentCore Runtime.
+    AgentCore Runtimeからのストリーミングレスポンスを処理します。
 
     Args:
-        event_stream: Event stream from InvokeAgentRuntime response
+        event_stream: InvokeAgentRuntimeレスポンスのイベントストリーム
 
     Returns:
-        Complete response text
+        完全なレスポンステキスト
     """
     response_parts = []
 
     try:
         for event in event_stream:
-            # Handle different event types in the stream
+            # ストリーム内の異なるイベントタイプを処理
             if 'chunk' in event:
                 chunk = event['chunk']
 
-                # Extract text from chunk
+                # チャンクからテキストを抽出
                 if 'bytes' in chunk:
                     chunk_text = chunk['bytes'].decode('utf-8')
                     response_parts.append(chunk_text)
                     logger.debug(f"Received chunk: {chunk_text}")
 
             elif 'trace' in event:
-                # Handle trace events for debugging
+                # デバッグ用のトレースイベントを処理
                 logger.debug(f"Trace event: {event['trace']}")
 
             elif 'internalServerException' in event:
@@ -235,6 +235,6 @@ def process_event_stream(event_stream) -> str:
         logger.error(f"Error processing event stream: {e}")
         raise
 
-    # Combine all response parts
+    # すべてのレスポンスパーツを結合
     complete_response = ''.join(response_parts)
     return complete_response if complete_response else "No response from agent"

@@ -3,14 +3,14 @@ from strands_tools import use_aws
 
 def create_agent(session_manager=None, system_prompt=None):
     """
-    Create an agent with S3 file reading capabilities.
+    S3ファイル読み取り機能を持つエージェントを作成します。
 
     Args:
-        session_manager: Optional AgentCore Memory session manager
-        system_prompt: Custom system prompt (default: generic helpful assistant)
+        session_manager: オプショナルなAgentCore Memoryセッションマネージャー
+        system_prompt: カスタムシステムプロンプト（デフォルト：汎用的なアシスタント）
 
     Returns:
-        Configured Agent instance
+        設定済みのAgentインスタンス
     """
     default_prompt = "You are a helpful assistant. Answer concisely."
 
@@ -18,7 +18,7 @@ def create_agent(session_manager=None, system_prompt=None):
         name="S3FileProcessingAgent",
         model="jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
         system_prompt=system_prompt or default_prompt,
-        tools=[use_aws],  # Add AWS tools for S3 operations
+        tools=[use_aws],  # S3操作用のAWSツールを追加
         session_manager=session_manager
     )
     return agent

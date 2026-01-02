@@ -1,8 +1,8 @@
 import os
 import logging
-from agent import create_agent
-from memory import create_memory
-from prompts import load_prompt
+from .agent import create_agent
+from .memory import create_memory
+from .prompts import load_prompt
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
