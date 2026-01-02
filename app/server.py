@@ -77,8 +77,23 @@ async def invocations(request: Request):
 
         logger.info(f"Invocation completed successfully")
 
-        # レスポンスを返す（handler関数の戻り値をそのまま返す）
-        return JSONResponse(content=result)
+        # AgentCore Runtimeが期待する形式にレスポンスを変換
+        # handler戻り値: {"statusCode": 200, "body": {"response": "..."}}
+        # AgentCore期待値: {"response": "...", "status": "success"}
+        if result.get("statusCode") == 200:
+            response_body = result.get("body", {})
+            agentcore_response = {
+                "response": response_body.get("response", ""),
+                "status": "success"
+            }
+            return JSONResponse(content=agentcore_response)
+        else:
+            # エラーの場合
+            error_body = result.get("body", {})
+            return JSONResponse(
+                status_code=result.get("statusCode", 500),
+                content={"error": error_body.get("error", "Unknown error")}
+            )
 
     except Exception as e:
         logger.error(f"Error processing invocation: {e}", exc_info=True)
