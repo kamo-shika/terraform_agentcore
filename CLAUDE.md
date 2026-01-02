@@ -1,111 +1,111 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、Claude Code (claude.ai/code) がこのリポジトリで作業する際のガイダンスを提供します。
 
-## Project Overview
+## プロジェクト概要
 
-This is a Bedrock AgentCore deployment project that packages and deploys AI agents to AWS using containerized runtimes. The project uses:
-- **Strands Agents framework** for agent implementation
-- **Bedrock AgentCore** for managed agent hosting on AWS
-- **Terraform** for infrastructure provisioning
-- **Docker + ECR** for containerized agent deployment
-- **uv** for Python dependency management
+このプロジェクトは、コンテナ化されたランタイムを使用してAIエージェントをAWSにパッケージ化・デプロイするBedrock AgentCoreデプロイメントプロジェクトです。以下の技術を使用しています：
+- **Strands Agents framework** - エージェント実装
+- **Bedrock AgentCore** - AWSでのマネージドエージェントホスティング
+- **Terraform** - インフラストラクチャのプロビジョニング
+- **Docker + ECR** - コンテナ化されたエージェントのデプロイ
+- **uv** - Python依存関係管理
 
-## Architecture
+## アーキテクチャ
 
-### Application Structure
-- `app/main.py` - Entry point with `handler()` function for AgentCore Runtime invocation
-- `app/agent.py` - Agent configuration using Strands framework (Claude Sonnet 4.5 model)
-- `app/memory.py` - AgentCore Memory integration setup (currently not wired into main handler)
+### アプリケーション構造
+- `app/main.py` - AgentCore Runtimeから呼び出される`handler()`関数を持つエントリーポイント
+- `app/agent.py` - Strandsフレームワークを使用したエージェント設定（Claude Sonnet 4.5モデル）
+- `app/memory.py` - AgentCore Memoryの統合設定（現在はmainハンドラに未接続）
 
-### Infrastructure (Terraform)
-- `terraform/agentcore.tf` - AgentCore Runtime and Memory resources
-- `terraform/ecr.tf` - ECR repository for Docker images
-- `terraform/iam.tf` - IAM roles and policies for Bedrock AgentCore service
-- `terraform/backend.tf` - Terraform state backend configuration
-- `terraform/variables.tf` - Project configuration (defaults to `ap-northeast-1`)
+### インフラストラクチャ（Terraform）
+- `terraform/agentcore.tf` - AgentCore RuntimeとMemoryリソース
+- `terraform/ecr.tf` - Dockerイメージ用のECRリポジトリ
+- `terraform/iam.tf` - Bedrock AgentCoreサービス用のIAMロールとポリシー
+- `terraform/backend.tf` - Terraformステートバックエンド設定
+- `terraform/variables.tf` - プロジェクト設定（デフォルトは`ap-northeast-1`）
 
-### Key Architecture Notes
-- AgentCore Runtime pulls container images from ECR
-- The container must expose a handler function compatible with AgentCore's invocation model
-- Memory integration exists in `memory.py` but is not currently used in the main handler
-- Network mode is PUBLIC (configured in agentcore.tf:13)
+### アーキテクチャの重要な注意点
+- AgentCore RuntimeはECRからコンテナイメージを取得
+- コンテナはAgentCoreの呼び出しモデルと互換性のあるhandler関数を公開する必要がある
+- Memory統合は`memory.py`に存在するが、現在はmainハンドラでは使用されていない
+- ネットワークモードはPUBLIC（agentcore.tf:13で設定）
 
-## Development Commands
+## 開発コマンド
 
-### Local Development
+### ローカル開発
 ```bash
-# Setup dependencies
-make setup                    # Installs dependencies with uv sync
+# 依存関係のセットアップ
+make setup                    # uv syncで依存関係をインストール
 
-# Run agent locally
-make run-local               # Runs app/main.py directly for testing
+# エージェントをローカルで実行
+make run-local               # app/main.pyを直接実行してテスト
 ```
 
-### Docker Build and Push
+### Dockerビルドとプッシュ
 ```bash
-# Build Docker image
-make build                   # Builds image tagged as agentcore-repo:latest
+# Dockerイメージをビルド
+make build                   # agentcore-repo:latestとしてタグ付けされたイメージをビルド
 
-# Login to ECR
-make login                   # Authenticates Docker with ECR
+# ECRにログイン
+make login                   # DockerをECRで認証
 
-# Build and push to ECR
-make push                    # Runs login + build + tag + push
+# ECRにビルドしてプッシュ
+make push                    # login + build + tag + pushを実行
 ```
 
-### Terraform Deployment
+### Terraformデプロイメント
 ```bash
-# Initialize Terraform
+# Terraformの初期化
 make init                    # cd terraform && terraform init
 
-# Plan infrastructure changes
-make plan                    # Preview changes with default variables
+# インフラストラクチャの変更をプレビュー
+make plan                    # デフォルト変数で変更をプレビュー
 
-# Apply infrastructure
-make apply                   # Deploy/update all resources
+# インフラストラクチャを適用
+make apply                   # すべてのリソースをデプロイ/更新
 
-# Destroy infrastructure
-make destroy                 # Tear down all resources
+# インフラストラクチャを破棄
+make destroy                 # すべてのリソースを削除
 ```
 
-### Deployment Workflows
+### デプロイメントワークフロー
 
-**Initial deployment** (creates ECR, then image, then agent):
+**初回デプロイメント**（ECR、次にイメージ、次にエージェントを作成）：
 ```bash
-make deploy-init             # 1. Create ECR repo
-                            # 2. Build & push image
-                            # 3. Create AgentCore runtime & memory
+make deploy-init             # 1. ECRリポジトリを作成
+                            # 2. イメージをビルド＆プッシュ
+                            # 3. AgentCore runtimeとmemoryを作成
 ```
 
-**Regular deployment** (update both infrastructure and code):
+**通常のデプロイメント**（インフラストラクチャとコードの両方を更新）：
 ```bash
-make deploy                  # Apply terraform + push new image
+make deploy                  # terraformを適用 + 新しいイメージをプッシュ
 ```
 
-## Configuration
+## 設定
 
-### Default Settings (Makefile)
+### デフォルト設定（Makefile）
 - PROJECT_NAME: `agentcore`
 - REGION: `ap-northeast-1`
-- Model: `jp.anthropic.claude-sonnet-4-5-20250929-v1:0` (Japan region endpoint)
+- Model: `jp.anthropic.claude-sonnet-4-5-20250929-v1:0`（日本リージョンエンドポイント）
 
-### Modifying Configuration
-Override Makefile variables or edit `terraform/variables.tf` defaults. Terraform commands accept `-var` flags for runtime customization.
+### 設定の変更
+Makefile変数をオーバーライドするか、`terraform/variables.tf`のデフォルトを編集します。Terraformコマンドは実行時のカスタマイズのために`-var`フラグを受け付けます。
 
-## Agent Development
+## エージェント開発
 
-### Adding Tools to Agent
-Edit `app/agent.py` and add tools to the `tools=[]` parameter. Available via `strands-agents-tools` package.
+### エージェントにツールを追加
+`app/agent.py`を編集し、`tools=[]`パラメータにツールを追加します。`strands-agents-tools`パッケージから利用可能です。
 
-### Memory Integration
-The `create_memory()` function in `app/memory.py` is ready but not integrated. To enable:
-1. Import in `main.py`
-2. Extract memory_id, session_id, actor_id from event
-3. Pass session_manager to agent configuration
+### Memory統合
+`app/memory.py`の`create_memory()`関数は準備できていますが、まだ統合されていません。有効にするには：
+1. `main.py`でインポート
+2. eventからmemory_id、session_id、actor_idを抽出
+3. session_managerをエージェント設定に渡す
 
-### Event Structure
-AgentCore invokes with event format:
+### イベント構造
+AgentCoreは以下の形式のイベントで呼び出します：
 ```python
 {
   "input": {
