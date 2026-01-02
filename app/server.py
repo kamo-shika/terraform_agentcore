@@ -75,13 +75,10 @@ async def invocations(request: Request):
         # contextパラメータは空の辞書（AgentCoreでは未使用）
         result = handler(event, {})
 
-        logger.info(f"Invocation completed with status: {result.get('statusCode')}")
+        logger.info(f"Invocation completed successfully")
 
-        # レスポンスを返す
-        return JSONResponse(
-            status_code=result.get("statusCode", 200),
-            content=result.get("body", {})
-        )
+        # レスポンスを返す（handler関数の戻り値をそのまま返す）
+        return JSONResponse(content=result)
 
     except Exception as e:
         logger.error(f"Error processing invocation: {e}", exc_info=True)
