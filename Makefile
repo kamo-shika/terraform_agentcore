@@ -15,7 +15,13 @@ setup:
 	uv sync
 
 run-local:
-	uv run python app/main.py
+	@if [ -f .env.local ]; then \
+		echo "Loading environment variables from .env.local..."; \
+		export $$(cat .env.local | grep -v '^#' | xargs) && uv run python app/main.py; \
+	else \
+		echo "No .env.local file found. Running without memory configuration..."; \
+		uv run python app/main.py; \
+	fi
 
 # --- Terraform ---
 init:
