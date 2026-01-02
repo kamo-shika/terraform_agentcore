@@ -29,7 +29,7 @@ def load_prompt(name: str, **kwargs) -> str:
     Example:
         >>> prompt = load_prompt("summarize", bucket="my-bucket", key="file.txt")
     """
-    prompt_path = PROMPTS_DIR / f"{name}.txt"
+    prompt_path = PROMPTS_DIR / f"{name}.md"
 
     if not prompt_path.exists():
         raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
@@ -51,7 +51,7 @@ def list_prompts() -> list[str]:
     Returns:
         List of prompt names (without .txt extension)
     """
-    return [f.stem for f in PROMPTS_DIR.glob("*.txt")]
+    return [f.stem for f in PROMPTS_DIR.glob("*.md")]
 
 
 def get_prompt_path(name: str) -> Path:
@@ -64,4 +64,4 @@ def get_prompt_path(name: str) -> Path:
     Returns:
         Path object for the prompt file
     """
-    return PROMPTS_DIR / f"{name}.txt"
+    return PROMPTS_DIR / f"{name}.md"

@@ -22,7 +22,7 @@ logger.setLevel(logging.INFO)
 
 # Initialize AWS clients
 s3_client = boto3.client('s3')
-bedrock_agent_runtime = boto3.client('bedrock-agent-runtime')
+bedrock_agentcore = boto3.client('bedrock-agentcore')
 
 # Environment variables
 AGENT_RUNTIME_ARN = os.environ.get('AGENT_RUNTIME_ARN')
@@ -169,10 +169,10 @@ def invoke_agent_runtime(
 
     try:
         # Call InvokeAgentRuntime API
-        response = bedrock_agent_runtime.invoke_agent_runtime(
+        response = bedrock_agentcore.invoke_agent_runtime(
             agentRuntimeArn=agent_runtime_arn,
-            sessionId=session_id,
-            inputPayload=json.dumps(payload).encode('utf-8')
+            runtimeSessionId=session_id,
+            payload=json.dumps(payload).encode('utf-8')
         )
 
         # Process streaming response

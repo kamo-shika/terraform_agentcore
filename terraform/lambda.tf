@@ -1,31 +1,15 @@
-# Data source to create a placeholder Lambda deployment package
-# Note: This will be replaced with actual invoker.py code in Issue #2
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  output_path = "${path.module}/lambda_function.zip"
-
-  source {
-    content  = <<EOF
-def handler(event, context):
-    """Placeholder handler - will be replaced with actual implementation"""
-    print("S3 Event received:", event)
-    return {"statusCode": 200, "body": "Placeholder"}
-EOF
-    filename = "invoker.py"
-  }
-}
-
 # Lambda function to invoke AgentCore
+# Note: Use ../build_lambda.sh to create lambda_function_payload.zip with dependencies
 resource "aws_lambda_function" "invoker" {
   function_name = "${var.project_name}-invoker"
   role          = aws_iam_role.lambda_role.arn
   handler       = "invoker.lambda_handler"
   runtime       = "python3.12"
-  filename      = data.archive_file.lambda_zip.output_path
+  filename      = "${path.module}/../lambda_function_payload.zip"
   timeout       = 300
   memory_size   = 512
 
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  source_code_hash = filebase64sha256("${path.module}/../lambda_function_payload.zip")
 
   environment {
     variables = {
@@ -90,9 +74,12 @@ resource "aws_iam_policy" "lambda_policy" {
       {
         Effect = "Allow"
         Action = [
-          "bedrock-agent-runtime:InvokeAgentRuntime"
+          "bedrock-agentcore:InvokeAgentRuntime"
         ]
-        Resource = aws_bedrockagentcore_agent_runtime.main.agent_runtime_arn
+        Resource = [
+          aws_bedrockagentcore_agent_runtime.main.agent_runtime_arn,
+          "${aws_bedrockagentcore_agent_runtime.main.agent_runtime_arn}/*"
+        ]
       },
       {
         Effect = "Allow"
