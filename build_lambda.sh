@@ -29,6 +29,6 @@ echo "Lambda deployment package created: lambda_function_payload.zip"
 
 # ビルドディレクトリをクリーンアップ
 rm -rf "$BUILD_DIR"
-rm lambda_function_payload.zip
+# rm lambda_function_payload.zip  # Terraformで必要なため削除しない
 
 echo "Build complete."

@@ -1,13 +1,12 @@
 # Agent Core Runtime Resource
-# container_uriにダイジェストを使用することで、イメージ更新時にTerraformが変更を検知する
+# terraform_data.image_digest_triggerの変更でリソース更新がトリガーされる
 resource "aws_bedrockagentcore_agent_runtime" "main" {
   agent_runtime_name = "${var.project_name}_runtime"
   role_arn           = aws_iam_role.agent_role.arn
 
   agent_runtime_artifact {
     container_configuration {
-      # :latestタグではなくダイジェストを使用してイメージ変更を検知
-      container_uri = "${aws_ecr_repository.main.repository_url}@${data.aws_ecr_image.latest.image_digest}"
+      container_uri = "${aws_ecr_repository.main.repository_url}:latest"
     }
   }
 
@@ -18,6 +17,11 @@ resource "aws_bedrockagentcore_agent_runtime" "main" {
   tags = {
     Environment = "dev"
     Project     = var.project_name
+  }
+
+  # イメージダイジェストが変わったらリソースを更新
+  lifecycle {
+    replace_triggered_by = [terraform_data.image_digest_trigger]
   }
 }
 

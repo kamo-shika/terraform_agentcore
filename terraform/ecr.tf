@@ -17,3 +17,9 @@ data "aws_ecr_image" "latest" {
   # 初回デプロイ時はこのdata sourceをスキップする
   depends_on = [aws_ecr_repository.main]
 }
+
+# イメージダイジェストの変更を追跡するためのリソース
+# ダイジェストが変わるとAgentCore Runtimeの更新がトリガーされる
+resource "terraform_data" "image_digest_trigger" {
+  input = data.aws_ecr_image.latest.image_digest
+}

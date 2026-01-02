@@ -85,8 +85,9 @@ make deploy                  # 1. 新しいイメージをビルド＆プッシ�
 ```
 
 **イメージ変更検知の仕組み**：
-- Terraformは`data.aws_ecr_image.latest`でECRイメージのダイジェストを取得
-- `container_uri`にダイジェストを使用することで、`:latest`タグでもイメージ変更を自動検知
+- `data.aws_ecr_image.latest`でECRイメージのダイジェストを取得
+- `terraform_data.image_digest_trigger`でダイジェスト変更を追跡
+- ダイジェストが変わると`lifecycle.replace_triggered_by`でAgentCore Runtimeが再作成される
 - `make deploy`は必ず`push → apply`の順序で実行される（ダイジェスト取得のため）
 
 **AgentCoreエンドポイント管理**：
