@@ -14,6 +14,8 @@ ENV PATH="/var/task/.venv/bin:$PATH"
 
 COPY app/ .
 
-# Set the CMD to your handler (could be different depending on how AgentCore invokes the container)
-# For standard Lambda-like invocation:
-CMD ["main.handler"]
+# Expose port for HTTP server
+EXPOSE 8080
+
+# Start the FastAPI server with Uvicorn
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8080"]
