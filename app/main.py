@@ -2,6 +2,7 @@ import os
 import logging
 from agent import create_agent
 from memory import create_memory
+from prompts import load_prompt
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -10,6 +11,7 @@ logger = logging.getLogger(__name__)
 def handler(event, context):
     """
     Entry point for Bedrock AgentCore Runtime.
+    Handles both regular invocations and S3 file processing.
     """
     logger.info("Received event: %s", event)
 
@@ -30,11 +32,43 @@ def handler(event, context):
         else:
             logger.info("Memory disabled (no AGENTCORE_MEMORY_ID)")
 
-        # Agentの作成
-        agent = create_agent(session_manager=session_manager)
-
-        # Extract input from the event (structure depends on AgentCore invocation)
+        # Check if this is an S3 file processing request
+        s3_info = event.get("s3_info")
+        system_prompt = None
         user_input = event.get("input", {}).get("text", "Hello")
+
+        if s3_info:
+            # S3 file processing mode
+            bucket = s3_info.get("bucket")
+            key = s3_info.get("key")
+            logger.info(f"S3 file processing request: s3://{bucket}/{key}")
+
+            # Load the summarization prompt with S3 context
+            try:
+                system_prompt = load_prompt(
+                    "summarize",
+                    bucket=bucket,
+                    key=key,
+                    user_id=actor_id
+                )
+                logger.info("Loaded summarization prompt")
+            except FileNotFoundError:
+                logger.warning("summarize.txt prompt not found, using default")
+            except Exception as e:
+                logger.warning(f"Failed to load prompt: {e}")
+
+            # Create specific instruction for S3 file processing
+            user_input = (
+                f"S3バケット '{bucket}' のファイル '{key}' を読み取り、内容を要約してください。\n"
+                f"use_awsツールを使用して以下のパラメータでファイルを取得してください:\n"
+                f"- service_name: 's3'\n"
+                f"- operation_name: 'get_object'\n"
+                f"- parameters: {{'Bucket': '{bucket}', 'Key': '{key}'}}\n"
+                f"- region: 'ap-northeast-1'"
+            )
+
+        # Agentの作成
+        agent = create_agent(session_manager=session_manager, system_prompt=system_prompt)
 
         # Run the agent
         response = agent(user_input)
