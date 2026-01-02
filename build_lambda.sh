@@ -29,6 +29,5 @@ echo "Lambda deployment package created: lambda_function_payload.zip"
 
 # ビルドディレクトリをクリーンアップ
 rm -rf "$BUILD_DIR"
-rm lambda_function_payload.zip
 
 echo "Build complete."

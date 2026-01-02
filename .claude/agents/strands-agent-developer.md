@@ -72,6 +72,12 @@ session_manager = AgentCoreMemorySessionManager(
 - 制約条件を明示
 - 変数は `{variable}` 形式で埋め込み可能に
 
+## Git/ブランチ戦略
+
+**CLAUDE.mdの「Git/ブランチ戦略」に従ってください。**
+- 別ワークツリーで作業
+- マージ前にプルリクエスト作成
+
 ## 作業開始時
 
 必ず以下を実行:
