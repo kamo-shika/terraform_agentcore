@@ -83,6 +83,19 @@ make deploy-init             # 1. ECRリポジトリを作成
 make deploy                  # terraformを適用 + 新しいイメージをプッシュ
 ```
 
+### AWS認証
+
+デプロイメントやAWSリソース操作を行う前に、AWS認証が必要です。セッションが期限切れの場合は以下を実行してください：
+
+```bash
+aws login                    # AWS SSOで認証を取得
+```
+
+**注意事項：**
+- `make push`、`make deploy`などのコマンド実行前に認証が必要
+- セッションは一定時間で期限切れになるため、定期的に再認証が必要
+- 認証エラー（"Your session has expired"）が発生した場合は`aws login`を実行
+
 ## 設定
 
 ### デフォルト設定（Makefile）

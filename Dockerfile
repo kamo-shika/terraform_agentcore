@@ -12,10 +12,10 @@ RUN uv sync --frozen --no-dev
 # Place executables in the environment at the front of the path
 ENV PATH="/var/task/.venv/bin:$PATH"
 
-COPY app/ .
+COPY app/ ./app/
 
 # Expose port for HTTP server
 EXPOSE 8080
 
 # Start the FastAPI server with Uvicorn
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "app.server:app", "--host", "0.0.0.0", "--port", "8080"]
