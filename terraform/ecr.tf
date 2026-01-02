@@ -6,3 +6,14 @@ resource "aws_ecr_repository" "main" {
     scan_on_push = true
   }
 }
+
+# ECRイメージの最新ダイジェストを取得
+# :latestタグの中身が変わった場合にTerraformが変更を検知できるようにする
+data "aws_ecr_image" "latest" {
+  repository_name = aws_ecr_repository.main.name
+  image_tag       = "latest"
+
+  # ECRリポジトリが作成された後、イメージがpushされるまでの間はエラーになるため
+  # 初回デプロイ時はこのdata sourceをスキップする
+  depends_on = [aws_ecr_repository.main]
+}
