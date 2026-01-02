@@ -6,7 +6,7 @@ output "memory_id" {
 }
 
 output "runtime_arn" {
-  value       = aws_bedrockagentcore_agent_runtime.main.arn
+  value       = aws_bedrockagentcore_agent_runtime.main.agent_runtime_arn
   description = "AgentCore Runtime ARN"
 }
 

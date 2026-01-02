@@ -44,3 +44,36 @@ resource "aws_iam_role_policy_attachment" "agent_ecr_attach" {
   policy_arn = aws_iam_policy.agent_ecr_access.arn
   role       = aws_iam_role.agent_role.name
 }
+
+# Policy to allow AgentCore to access S3 trigger bucket
+resource "aws_iam_policy" "agent_s3_access" {
+  name        = "${var.project_name}-agent-s3-policy"
+  description = "Allow AgentCore to read from S3 trigger bucket"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:HeadObject"
+        ]
+        Resource = "arn:aws:s3:::${var.project_name}-trigger-bucket/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = "arn:aws:s3:::${var.project_name}-trigger-bucket"
+      }
+    ]
+  })
+}
+
+# Attach S3 access policy to AgentCore role
+resource "aws_iam_role_policy_attachment" "agent_s3_attach" {
+  policy_arn = aws_iam_policy.agent_s3_access.arn
+  role       = aws_iam_role.agent_role.name
+}
