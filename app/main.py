@@ -73,10 +73,13 @@ def handler(event, context):
         # Run the agent
         response = agent(user_input)
 
+        # AgentResultオブジェクトを文字列に変換（JSON serializable化）
+        response_text = str(response) if response else ""
+
         return {
             "statusCode": 200,
             "body": {
-                "response": response
+                "response": response_text
             }
         }
     except Exception as e:
