@@ -8,6 +8,55 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 
+class TestCreateRetrievalConfig:
+    """
+    create_retrieval_config関数のテスト。
+    """
+
+    def test_returns_config_when_ltm_enabled(self):
+        """
+        LTM有効時にRetrievalConfigが返されることを確認する。
+        """
+        with patch("app.memory.LTM_ENABLED", True), \
+             patch("app.memory.LTM_SUMMARY_TOP_K", 10), \
+             patch("app.memory.LTM_SUMMARY_SCORE", 0.3), \
+             patch("app.memory.LTM_NAMESPACE", "/file-summaries/{actorId}"):
+            from app.memory import create_retrieval_config
+
+            result = create_retrieval_config()
+
+            assert result is not None
+            assert "/file-summaries/{actorId}" in result
+            assert result["/file-summaries/{actorId}"]["top_k"] == 10
+            assert result["/file-summaries/{actorId}"]["relevance_score"] == 0.3
+
+    def test_returns_none_when_ltm_disabled(self):
+        """
+        LTM無効時にNoneが返されることを確認する。
+        """
+        with patch("app.memory.LTM_ENABLED", False):
+            from app.memory import create_retrieval_config
+
+            result = create_retrieval_config()
+
+            assert result is None
+
+    def test_uses_custom_top_k_value(self):
+        """
+        カスタムのtop_k値が使用されることを確認する。
+        """
+        with patch("app.memory.LTM_ENABLED", True), \
+             patch("app.memory.LTM_SUMMARY_TOP_K", 20), \
+             patch("app.memory.LTM_SUMMARY_SCORE", 0.5), \
+             patch("app.memory.LTM_NAMESPACE", "/file-summaries/{actorId}"):
+            from app.memory import create_retrieval_config
+
+            result = create_retrieval_config()
+
+            assert result["/file-summaries/{actorId}"]["top_k"] == 20
+            assert result["/file-summaries/{actorId}"]["relevance_score"] == 0.5
+
+
 class TestCreateMemory:
     """
     create_memory関数のテスト。
@@ -20,8 +69,10 @@ class TestCreateMemory:
         from app.memory import create_memory
 
         with patch("app.memory.AgentCoreMemorySessionManager") as mock_manager, \
-             patch("app.memory.AgentCoreMemoryConfig") as mock_config:
+             patch("app.memory.AgentCoreMemoryConfig") as mock_config, \
+             patch("app.memory.create_retrieval_config") as mock_retrieval:
             mock_manager.return_value = MagicMock()
+            mock_retrieval.return_value = None
 
             result = create_memory(
                 mem_id="test-memory",
@@ -33,7 +84,8 @@ class TestCreateMemory:
             mock_config.assert_called_once_with(
                 memory_id="test-memory",
                 session_id="test-session",
-                actor_id="test-actor"
+                actor_id="test-actor",
+                retrieval_config=None
             )
             mock_manager.assert_called_once()
 
@@ -44,8 +96,10 @@ class TestCreateMemory:
         from app.memory import create_memory
 
         with patch("app.memory.AgentCoreMemorySessionManager") as mock_manager, \
-             patch("app.memory.AgentCoreMemoryConfig") as mock_config:
+             patch("app.memory.AgentCoreMemoryConfig") as mock_config, \
+             patch("app.memory.create_retrieval_config") as mock_retrieval:
             mock_manager.return_value = MagicMock()
+            mock_retrieval.return_value = None
 
             # 別のパラメータで呼び出し
             result = create_memory(
@@ -67,8 +121,10 @@ class TestCreateMemory:
         from app.memory import create_memory
 
         with patch("app.memory.AgentCoreMemorySessionManager") as mock_manager, \
-             patch("app.memory.AgentCoreMemoryConfig"):
+             patch("app.memory.AgentCoreMemoryConfig"), \
+             patch("app.memory.create_retrieval_config") as mock_retrieval:
             mock_manager.return_value = MagicMock()
+            mock_retrieval.return_value = None
 
             create_memory(
                 mem_id="test-memory",
@@ -86,10 +142,12 @@ class TestCreateMemory:
         from app.memory import create_memory
 
         with patch("app.memory.AgentCoreMemorySessionManager") as mock_manager, \
-             patch("app.memory.AgentCoreMemoryConfig") as mock_config:
+             patch("app.memory.AgentCoreMemoryConfig") as mock_config, \
+             patch("app.memory.create_retrieval_config") as mock_retrieval:
             mock_config_instance = MagicMock()
             mock_config.return_value = mock_config_instance
             mock_manager.return_value = MagicMock()
+            mock_retrieval.return_value = None
 
             create_memory(
                 mem_id="test-memory",
@@ -99,3 +157,32 @@ class TestCreateMemory:
 
             manager_call_args = mock_manager.call_args
             assert manager_call_args.kwargs["agentcore_memory_config"] == mock_config_instance
+
+    def test_create_memory_with_ltm_enabled(self):
+        """
+        LTM有効時にRetrievalConfigがセッションマネージャーに渡されることを確認する。
+        """
+        from app.memory import create_memory
+
+        mock_retrieval_config = {
+            "/file-summaries/{actorId}": {
+                "top_k": 10,
+                "relevance_score": 0.3
+            }
+        }
+
+        with patch("app.memory.AgentCoreMemorySessionManager") as mock_manager, \
+             patch("app.memory.AgentCoreMemoryConfig") as mock_config, \
+             patch("app.memory.create_retrieval_config") as mock_retrieval:
+            mock_manager.return_value = MagicMock()
+            mock_retrieval.return_value = mock_retrieval_config
+
+            create_memory(
+                mem_id="test-memory",
+                session_id="test-session",
+                actor_id="test-actor"
+            )
+
+            # RetrievalConfigがAgentCoreMemoryConfigに渡されていることを確認
+            config_call_args = mock_config.call_args
+            assert config_call_args.kwargs["retrieval_config"] == mock_retrieval_config

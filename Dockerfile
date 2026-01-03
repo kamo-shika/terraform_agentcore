@@ -3,6 +3,13 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 WORKDIR /var/task
 
+# ビルド時引数: AgentCore Memory ID（Terraformから取得）
+ARG AGENTCORE_MEMORY_ID=""
+
+# 環境変数設定
+ENV AGENTCORE_MEMORY_ID=${AGENTCORE_MEMORY_ID}
+ENV LTM_ENABLED=true
+
 # 非rootユーザーを作成
 RUN groupadd --gid 1000 appuser && \
     useradd --uid 1000 --gid 1000 --no-create-home appuser

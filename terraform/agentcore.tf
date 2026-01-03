@@ -37,3 +37,16 @@ resource "aws_bedrockagentcore_memory" "main" {
 
   tags = local.common_tags
 }
+
+# ==============================================================================
+# Bedrock AgentCore Memory Strategy - Semantic (ファイル要約蓄積)
+# ==============================================================================
+# ファイル要約を長期メモリとして蓄積するためのSemantic Memory Strategy
+# ユーザー（actorId）別にファイル要約を保存・取得する
+resource "aws_bedrockagentcore_memory_strategy" "file_summary" {
+  name        = "FileSummaryExtractor"
+  memory_id   = aws_bedrockagentcore_memory.main.id
+  type        = "SEMANTIC"
+  namespaces  = ["/file-summaries/{actorId}"]
+  description = "S3ファイル要約を蓄積し、過去の要約を統合した出力を可能にするSemantic Memory Strategy"
+}
