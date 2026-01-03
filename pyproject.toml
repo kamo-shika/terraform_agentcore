@@ -12,6 +12,7 @@ dependencies = [
     "strands-agents-tools>=0.2.18",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
+    "aws-opentelemetry-distro>=0.12.2",  # AgentCore Observability用
 ]
 
 [dependency-groups]
