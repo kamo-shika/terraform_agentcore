@@ -116,6 +116,9 @@ def clean_env(monkeypatch):
         "AGENTCORE_MEMORY_ID",
         "SESSION_ID",
         "ACTOR_ID",
+        "MODEL_ID",
+        "AWS_REGION",
+        "DEFAULT_INPUT_TEXT",
     ]
 
     for var in env_vars_to_remove:
