@@ -57,3 +57,9 @@ variable "enable_prod_endpoint" {
   type        = bool
   default     = false
 }
+
+variable "image_tag" {
+  description = "ECRイメージのタグ（Git commit hashなど）。イメージ変更時にAgentCore Runtimeを更新するために使用"
+  type        = string
+  default     = "latest"
+}

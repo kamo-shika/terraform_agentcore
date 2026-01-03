@@ -15,8 +15,9 @@ resource "aws_bedrockagentcore_agent_runtime" "main" {
 
   agent_runtime_artifact {
     container_configuration {
-      # 常に:latestタグを参照するが、Makefileでgit commit hashタグも付与される
-      container_uri = "${aws_ecr_repository.main.repository_url}:latest"
+      # イメージタグを変数で指定することで、イメージ更新時にTerraformが変更を検知
+      # UpdateAgentRuntime APIでin-place更新され、新しいバージョンが作成される
+      container_uri = "${aws_ecr_repository.main.repository_url}:${var.image_tag}"
     }
   }
 

@@ -91,13 +91,13 @@ init:
 	cd $(TF_DIR) && terraform init
 
 plan:
-	cd $(TF_DIR) && terraform plan -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)"
+	cd $(TF_DIR) && terraform plan -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)" -var="image_tag=$(GIT_COMMIT)"
 
 apply:
-	cd $(TF_DIR) && terraform apply -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)"
+	cd $(TF_DIR) && terraform apply -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)" -var="image_tag=$(GIT_COMMIT)"
 
 destroy:
-	cd $(TF_DIR) && terraform destroy -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)"
+	cd $(TF_DIR) && terraform destroy -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)" -var="image_tag=$(GIT_COMMIT)"
 
 validate-tf:
 	cd $(TF_DIR) && terraform validate
@@ -131,7 +131,7 @@ deploy: push apply
 
 # Initial deployment: Create ECR -> Push Image -> Create Agent
 deploy-init:
-	cd $(TF_DIR) && terraform apply -target=aws_ecr_repository.main -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)"
+	cd $(TF_DIR) && terraform apply -target=aws_ecr_repository.main -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)" -var="image_tag=$(GIT_COMMIT)"
 	$(MAKE) push
 	$(MAKE) apply
 
