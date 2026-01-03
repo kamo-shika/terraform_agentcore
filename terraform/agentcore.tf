@@ -15,7 +15,7 @@ resource "aws_bedrockagentcore_agent_runtime" "main" {
   }
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = var.project_name
   }
 
@@ -28,5 +28,5 @@ resource "aws_bedrockagentcore_agent_runtime" "main" {
 # Agent Core Memory Resource
 resource "aws_bedrockagentcore_memory" "main" {
   name                  = "${var.project_name}_memory"
-  event_expiry_duration = 30
+  event_expiry_duration = var.memory_event_expiry_days
 }

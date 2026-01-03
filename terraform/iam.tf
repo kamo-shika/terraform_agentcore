@@ -15,8 +15,28 @@ resource "aws_iam_role" "agent_role" {
   })
 }
 
+# AgentCoreがBedrockモデルを呼び出すための最小権限ポリシー
+resource "aws_iam_policy" "agent_bedrock_access" {
+  name        = "${var.project_name}-agent-bedrock-policy"
+  description = "最小権限でAgentCoreがBedrockモデルを呼び出すためのポリシー"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "agent_bedrock_access" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+  policy_arn = aws_iam_policy.agent_bedrock_access.arn
   role       = aws_iam_role.agent_role.name
 }
 
