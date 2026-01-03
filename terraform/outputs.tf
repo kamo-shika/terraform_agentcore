@@ -24,3 +24,8 @@ output "current_image_digest" {
   value       = data.aws_ecr_image.latest.image_digest
   description = "現在デプロイされているイメージのダイジェスト"
 }
+
+output "prod_endpoint_arn" {
+  value       = var.enable_prod_endpoint ? aws_bedrockagentcore_agent_runtime_endpoint.prod[0].agent_runtime_endpoint_arn : null
+  description = "PRODエンドポイントARN（enable_prod_endpoint=true時のみ）"
+}

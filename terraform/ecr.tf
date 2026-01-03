@@ -17,8 +17,8 @@ resource "aws_ecr_repository" "main" {
 # ==============================================================================
 # ECR Image Data Source
 # ==============================================================================
-# ECRイメージの最新ダイジェストを取得
-# :latestタグの中身が変わった場合にTerraformが変更を検知できるようにする
+# ECRイメージの最新ダイジェストを取得（参照用）
+# イメージのダイジェストをoutputに出力してデプロイ履歴を追跡可能にする
 data "aws_ecr_image" "latest" {
   repository_name = aws_ecr_repository.main.name
   image_tag       = "latest"
@@ -28,11 +28,6 @@ data "aws_ecr_image" "latest" {
   depends_on = [aws_ecr_repository.main]
 }
 
-# ==============================================================================
-# Image Digest Trigger
-# ==============================================================================
-# イメージダイジェストの変更を追跡するためのリソース
-# ダイジェストが変わるとAgentCore Runtimeの更新がトリガーされる
-resource "terraform_data" "image_digest_trigger" {
-  input = data.aws_ecr_image.latest.image_digest
-}
+# 注意: terraform_data.image_digest_triggerは削除済み
+# 理由: replace_triggered_byによるdestroy→createではなく
+# UpdateAgentRuntime APIによるin-place更新を使用するため

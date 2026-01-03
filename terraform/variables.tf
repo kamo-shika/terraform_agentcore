@@ -51,3 +51,9 @@ variable "s3_trigger_suffix" {
   type        = string
   default     = ".txt"
 }
+
+variable "enable_prod_endpoint" {
+  description = "PRODエンドポイントを作成するかどうか（本番環境向けの手動バージョン管理用）"
+  type        = bool
+  default     = false
+}
