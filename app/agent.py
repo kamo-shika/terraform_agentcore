@@ -1,8 +1,11 @@
+import logging
 from typing import Optional
 from strands import Agent
 from strands_tools import use_aws
 from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
 from .config import MODEL_ID
+
+logger = logging.getLogger(__name__)
 
 
 def create_agent(

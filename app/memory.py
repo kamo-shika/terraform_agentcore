@@ -1,3 +1,4 @@
+import logging
 from typing import Optional, Dict, Any
 from bedrock_agentcore.memory.integrations.strands.config import AgentCoreMemoryConfig
 from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
@@ -8,6 +9,8 @@ from .config import (
     LTM_SUMMARY_SCORE,
     LTM_NAMESPACE,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def create_retrieval_config() -> Optional[Dict[str, Any]]:

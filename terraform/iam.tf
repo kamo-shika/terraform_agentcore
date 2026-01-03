@@ -122,3 +122,50 @@ resource "aws_iam_role_policy_attachment" "agent_s3_attach" {
   policy_arn = aws_iam_policy.agent_s3_access.arn
   role       = aws_iam_role.agent_role.name
 }
+
+# ==============================================================================
+# IAM Policy: AgentCore Memory Access
+# ==============================================================================
+# AgentCoreがMemoryにアクセスするためのポリシー
+# セッション管理、イベント記録、ファクト取得などに必要
+resource "aws_iam_policy" "agent_memory_access" {
+  name        = "${var.project_name}-agent-memory-policy"
+  description = "AgentCoreがMemoryにアクセスするためのポリシー"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          # イベント操作
+          "bedrock-agentcore:CreateEvent",
+          "bedrock-agentcore:GetEvent",
+          "bedrock-agentcore:DeleteEvent",
+          "bedrock-agentcore:ListEvents",
+          # セッション・アクター操作
+          "bedrock-agentcore:ListSessions",
+          "bedrock-agentcore:ListActors",
+          # メモリレコード操作（LTM/Semantic Memory）
+          "bedrock-agentcore:ListMemoryRecords",
+          "bedrock-agentcore:GetMemoryRecord",
+          "bedrock-agentcore:BatchCreateMemoryRecords",
+          "bedrock-agentcore:BatchUpdateMemoryRecords",
+          "bedrock-agentcore:BatchDeleteMemoryRecords",
+          "bedrock-agentcore:DeleteMemoryRecord"
+        ]
+        Resource = [
+          aws_bedrockagentcore_memory.main.arn,
+          "${aws_bedrockagentcore_memory.main.arn}/*"
+        ]
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "agent_memory_attach" {
+  policy_arn = aws_iam_policy.agent_memory_access.arn
+  role       = aws_iam_role.agent_role.name
+}
