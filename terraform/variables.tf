@@ -1,11 +1,11 @@
 variable "project_name" {
-  description = "Project name to be used for resource naming"
+  description = "プロジェクト名（リソース命名に使用）"
   type        = string
   default     = "agentcore"
 }
 
 variable "region" {
-  description = "AWS Region"
+  description = "AWSリージョン"
   type        = string
   default     = "ap-northeast-1"
 }

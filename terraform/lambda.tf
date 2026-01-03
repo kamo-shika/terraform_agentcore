@@ -1,7 +1,11 @@
-# Lambda function to invoke AgentCore
-# Note: Use ../build_lambda.sh to create lambda_function_payload.zip with dependencies
+# ==============================================================================
+# Lambda Function: AgentCore Invoker
+# ==============================================================================
+# S3トリガーからAgentCoreを呼び出すLambda関数
+# S3にファイルがアップロードされるとこのLambdaが起動し、AgentCoreを実行
+# Note: ../build_lambda.sh でlambda_function_payload.zipを作成すること
 resource "aws_lambda_function" "invoker" {
-  function_name = "${var.project_name}-invoker"
+  function_name = local.lambda_function_name
   role          = aws_iam_role.lambda_role.arn
   handler       = "invoker.lambda_handler"
   runtime       = var.lambda_runtime
@@ -18,14 +22,15 @@ resource "aws_lambda_function" "invoker" {
     }
   }
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-    Purpose     = "AgentCore invoker"
-  }
+  tags = merge(local.common_tags, {
+    Purpose = "AgentCore invoker"
+  })
 }
 
-# Lambda permission to allow S3 to invoke the function
+# ==============================================================================
+# Lambda Permission: S3 Trigger
+# ==============================================================================
+# S3バケットがLambda関数を呼び出すための権限
 resource "aws_lambda_permission" "s3" {
   statement_id  = "AllowS3Invoke"
   action        = "lambda:InvokeFunction"
@@ -34,9 +39,13 @@ resource "aws_lambda_permission" "s3" {
   source_arn    = aws_s3_bucket.trigger.arn
 }
 
-# IAM role for Lambda function
+# ==============================================================================
+# IAM Role for Lambda
+# ==============================================================================
+# Lambda関数が使用するIAMロール
+# S3、AgentCore、CloudWatch Logsへのアクセス権限を付与
 resource "aws_iam_role" "lambda_role" {
-  name = "${var.project_name}-lambda-role"
+  name = local.lambda_role_name
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -49,16 +58,16 @@ resource "aws_iam_role" "lambda_role" {
     }]
   })
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  tags = local.common_tags
 }
 
-# IAM policy for Lambda function
+# ==============================================================================
+# IAM Policy for Lambda
+# ==============================================================================
+# Lambda関数がS3、AgentCore、CloudWatch Logsにアクセスするためのポリシー
 resource "aws_iam_policy" "lambda_policy" {
-  name        = "${var.project_name}-lambda-policy"
-  description = "Policy for Lambda to access S3, AgentCore, and CloudWatch Logs"
+  name        = local.lambda_policy_name
+  description = "Lambda関数がS3、AgentCore、CloudWatch Logsにアクセスするためのポリシー"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -88,25 +97,26 @@ resource "aws_iam_policy" "lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:${var.region}:*:log-group:/aws/lambda/${var.project_name}-invoker:*"
+        Resource = "arn:aws:logs:${var.region}:*:log-group:${local.lambda_log_group_name}:*"
       }
     ]
   })
+
+  tags = local.common_tags
 }
 
-# Attach the policy to the Lambda role
 resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
   policy_arn = aws_iam_policy.lambda_policy.arn
   role       = aws_iam_role.lambda_role.name
 }
 
+# ==============================================================================
 # CloudWatch Log Group for Lambda
+# ==============================================================================
+# Lambda関数のログを保存するCloudWatch Logsロググループ
 resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = "/aws/lambda/${var.project_name}-invoker"
+  name              = local.lambda_log_group_name
   retention_in_days = var.log_retention_days
 
-  tags = {
-    Environment = var.environment
-    Project     = var.project_name
-  }
+  tags = local.common_tags
 }
