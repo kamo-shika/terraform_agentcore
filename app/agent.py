@@ -1,18 +1,23 @@
+from typing import Optional
 from strands import Agent
 from strands_tools import use_aws
+from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
 from .config import MODEL_ID
 
 
-def create_agent(session_manager=None, system_prompt=None):
+def create_agent(
+    session_manager: Optional[AgentCoreMemorySessionManager] = None,
+    system_prompt: Optional[str] = None
+) -> Agent:
     """
-    S3ファイル読み取り機能を持つエージェントを作成します。
+    S3ファイル読み取り機能を持つエージェントを作成する。
 
     Args:
-        session_manager: オプショナルなAgentCore Memoryセッションマネージャー
-        system_prompt: カスタムシステムプロンプト（デフォルト：汎用的なアシスタント）
+        session_manager: AgentCore Memoryセッションマネージャー（オプション）
+        system_prompt: カスタムシステムプロンプト（オプション、デフォルト：汎用的なアシスタント）
 
     Returns:
-        設定済みのAgentインスタンス
+        設定済みのStrandsエージェントインスタンス
     """
     default_prompt = "You are a helpful assistant. Answer concisely."
 

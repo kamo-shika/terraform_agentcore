@@ -3,7 +3,9 @@
 
 このモジュールは、環境変数から設定値を読み取り、デフォルト値を提供する。
 設定値は定数として定義され、実行時に動的に値を取得するヘルパー関数も提供する。
+また、アプリケーション全体のロギング設定も一元管理する。
 """
+import logging
 import os
 from typing import Optional
 
@@ -26,6 +28,31 @@ DEFAULT_ACTOR_ID = os.getenv("ACTOR_ID", "local-user")
 
 # デフォルト入力テキスト: エージェントへのデフォルト入力
 DEFAULT_INPUT_TEXT = os.getenv("DEFAULT_INPUT_TEXT", "Hello")
+
+
+# ========================================
+# ロギング設定
+# ========================================
+
+def setup_logging() -> None:
+    """
+    アプリケーション全体のロギング設定を初期化する。
+
+    この関数は、アプリケーション起動時に一度だけ呼び出される。
+    ログレベル、フォーマット、ハンドラーを統一的に設定する。
+
+    Returns:
+        None
+    """
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+
+
+# ロギング設定を初期化（モジュールインポート時に一度だけ実行）
+setup_logging()
 
 
 # ========================================

@@ -7,14 +7,13 @@ FastAPI HTTPサーバー - Bedrock AgentCore Runtime用。
 """
 
 import logging
-
+from typing import Dict, Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from .main import handler
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# ロギング設定はconfig.pyで一元管理されている
 logger = logging.getLogger(__name__)
 
 # FastAPIアプリケーションの初期化
@@ -22,12 +21,12 @@ app = FastAPI(title="AgentCore Runtime Server", description="Bedrock AgentCore R
 
 
 @app.get("/ping")
-async def ping():
+async def ping() -> Dict[str, str]:
     """
     ヘルスチェックエンドポイント。
 
     Returns:
-        dict: ステータスメッセージを含む辞書
+        ステータスメッセージを含む辞書: {"status": "healthy"}
 
     Example:
         >>> GET /ping
@@ -38,7 +37,7 @@ async def ping():
 
 
 @app.post("/invocations")
-async def invocations(request: Request):
+async def invocations(request: Request) -> JSONResponse:
     """
     エージェント実行のメインエンドポイント。
 
@@ -49,10 +48,10 @@ async def invocations(request: Request):
         request: FastAPIリクエストオブジェクト
 
     Returns:
-        JSONResponse: エージェントの実行結果
+        エージェントの実行結果を含むJSONレスポンス
 
     Raises:
-        HTTPException: エージェント実行時のエラー
+        Exception: エージェント実行時のエラー（catchされて500エラーとして返される）
 
     Example:
         >>> POST /invocations
@@ -66,7 +65,7 @@ async def invocations(request: Request):
     """
     try:
         # リクエストボディをJSONとして取得
-        event = await request.json()
+        event: Dict[str, Any] = await request.json()
         logger.info(f"Invocation request received: {event}")
 
         # main.pyのhandler関数を呼び出し
@@ -95,12 +94,12 @@ async def invocations(request: Request):
 
 
 @app.get("/")
-async def root():
+async def root() -> Dict[str, Any]:
     """
     ルートエンドポイント。
 
     Returns:
-        dict: サーバー情報を含む辞書
+        サーバー情報を含む辞書
     """
     return {
         "service": "AgentCore Runtime Server",
