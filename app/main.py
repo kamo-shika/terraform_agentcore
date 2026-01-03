@@ -10,6 +10,9 @@ from .config import get_memory_id, get_session_id, get_actor_id, get_input_text,
 # ロギング設定はconfig.pyで一元管理されている
 logger = logging.getLogger(__name__)
 
+# アプリケーションバージョン（デプロイ追跡用）
+APP_VERSION = "1.1.0"
+
 
 def parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -128,7 +131,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Raises:
         Exception: エージェント実行時の例外（catchされて500エラーとして返される）
     """
-    logger.info("Received event: %s", event)
+    logger.info("App version: %s - Received event: %s", APP_VERSION, event)
 
     try:
         # イベント解析
