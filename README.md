@@ -2,7 +2,7 @@
 
 AWS Bedrock AgentCoreを使用して、コンテナ化されたAIエージェントをAWSにデプロイするためのプロジェクトです。
 
-## 🚀 概要
+## 概要
 
 このプロジェクトは以下の技術スタックで構築されています：
 
@@ -12,7 +12,7 @@ AWS Bedrock AgentCoreを使用して、コンテナ化されたAIエージェン
 - **Docker + ECR** - コンテナイメージ管理
 - **uv** - Python依存関係管理
 
-## 📋 前提条件
+## 前提条件
 
 - AWS CLIがインストール・設定済み
 - Dockerがインストール済み
@@ -20,30 +20,35 @@ AWS Bedrock AgentCoreを使用して、コンテナ化されたAIエージェン
 - Python 3.12+
 - uv（Python依存関係管理ツール）
 
-## 🏗️ プロジェクト構成
+## プロジェクト構成
 
 ```
 .
 ├── app/
 │   ├── main.py          # エントリーポイント（handler関数）
 │   ├── agent.py         # エージェント設定（Claude Sonnet 4.5使用）
-│   └── memory.py        # AgentCore Memory統合設定
+│   ├── memory.py        # AgentCore Memory統合設定
+│   └── prompts/         # プロンプトテンプレート
 ├── terraform/
 │   ├── agentcore.tf     # AgentCore RuntimeとMemoryリソース
 │   ├── ecr.tf           # ECRリポジトリ
 │   ├── iam.tf           # IAMロールとポリシー
+│   ├── lambda.tf        # Lambda関数（S3トリガー用）
+│   ├── s3.tf            # S3トリガーバケット
 │   ├── backend.tf       # Terraformステート管理
 │   └── variables.tf     # プロジェクト設定
+├── lambda/
+│   └── invoker.py       # S3イベントからAgentCoreを呼び出すLambda
+├── tests/               # テストコード
+├── .claude/agents/      # サブエージェント定義
 ├── Dockerfile           # コンテナイメージ定義
 ├── Makefile             # 便利なコマンド集
 └── pyproject.toml       # Python依存関係
 ```
 
-## 🎯 クイックスタート
+## クイックスタート
 
 ### 1. 初回デプロイ
-
-プロジェクトを初めてデプロイする場合：
 
 ```bash
 # 依存関係のインストール
@@ -53,57 +58,62 @@ make setup
 make deploy-init
 ```
 
-このコマンドで以下が実行されます：
-1. ECRリポジトリの作成
-2. Dockerイメージのビルドとプッシュ
-3. AgentCore RuntimeとMemoryの作成
-
 ### 2. ローカルでのテスト
 
-デプロイ前にローカルでエージェントをテストできます：
-
 ```bash
-# エージェントをローカル実行
+# エージェントをローカル実行（対話モード）
 make run-local
 ```
 
 ### 3. コード変更後の更新デプロイ
-
-エージェントのコードを変更した後：
 
 ```bash
 # インフラ更新 + 新しいイメージをプッシュ
 make deploy
 ```
 
-## 📝 よく使うコマンド
+## よく使うコマンド
 
-### 開発コマンド
+### 開発
 
-```bash
-make setup          # 依存関係のインストール
-make run-local      # エージェントをローカル実行
-make build          # Dockerイメージをビルド
-make push           # イメージをビルド＆ECRにプッシュ
-```
+| コマンド | 説明 |
+|---------|------|
+| `make setup` | 依存関係のインストール |
+| `make run-local` | エージェントをローカル実行 |
+| `make build` | Dockerイメージをビルド |
+| `make push` | イメージをビルド＆ECRにプッシュ |
 
-### インフラコマンド
+### インフラ
 
-```bash
-make init           # Terraformの初期化
-make plan           # インフラ変更のプレビュー
-make apply          # インフラを適用
-make destroy        # すべてのリソースを削除
-```
+| コマンド | 説明 |
+|---------|------|
+| `make init` | Terraformの初期化 |
+| `make plan` | インフラ変更のプレビュー |
+| `make apply` | インフラを適用 |
+| `make destroy` | すべてのリソースを削除 |
 
-### デプロイコマンド
+### デプロイ
 
-```bash
-make deploy-init    # 初回デプロイ（ECR → イメージ → AgentCore）
-make deploy         # 通常のデプロイ（インフラ更新 + イメージ更新）
-```
+| コマンド | 説明 |
+|---------|------|
+| `make deploy-init` | 初回デプロイ（ECR → イメージ → AgentCore） |
+| `make deploy` | 通常のデプロイ（インフラ更新 + イメージ更新） |
 
-## ⚙️ 設定
+### AgentCoreエンドポイント管理
+
+| コマンド | 説明 |
+|---------|------|
+| `make update-endpoint` | DEFAULTエンドポイントを最新バージョンに更新 |
+| `make get-runtime-info` | Runtime情報とエンドポイント一覧を表示 |
+
+### テスト
+
+| コマンド | 説明 |
+|---------|------|
+| `make test` | 全テストを実行 |
+| `make test-cov` | カバレッジ付きでテストを実行 |
+
+## 設定
 
 デフォルト設定は`Makefile`で定義されています：
 
@@ -113,65 +123,95 @@ make deploy         # 通常のデプロイ（インフラ更新 + イメージ�
 
 設定を変更する場合は、`Makefile`の変数を編集するか、`terraform/variables.tf`を変更してください。
 
-## 🔧 エージェントのカスタマイズ
+## サブエージェント
 
-### ツールの追加
+このプロジェクトでは、Claude Codeが使用する専門サブエージェントを定義しています。
 
-`app/agent.py`を編集して、エージェントにツールを追加できます：
+| エージェント | 専門領域 |
+|-------------|---------|
+| `terraform-specialist` | Terraform/AWSインフラ構築、IAM設計 |
+| `python-developer` | Pythonアプリケーション、Lambda関数実装 |
+| `strands-agent-developer` | Strands Agents、AgentCore統合 |
+| `integrator` | 統合検証、デプロイ確認 |
+| `test-specialist` | TDD、テスト実装、カバレッジ分析 |
+| `cloudwatch-investigator` | CloudWatchログ調査、エラー分析 |
 
-```python
-agent = create_agent(
-    model=model,
-    agent_name="agent-core",
-    tools=[
-        # ここにツールを追加
-        # strands-agents-toolsパッケージから利用可能
-    ]
-)
+詳細は`.claude/agents/`ディレクトリと`CLAUDE.md`を参照してください。
+
+## アーキテクチャ
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   S3 Bucket     │────▶│     Lambda      │────▶│ AgentCore       │
+│  (トリガー)      │     │   (Invoker)     │     │  Runtime        │
+└─────────────────┘     └─────────────────┘     └────────┬────────┘
+                                                         │
+                                                         ▼
+                                               ┌─────────────────┐
+                                               │ Strands Agent   │
+                                               │ (Docker/ECR)    │
+                                               └────────┬────────┘
+                                                         │
+                                                         ▼
+                                               ┌─────────────────┐
+                                               │ AgentCore       │
+                                               │   Memory        │
+                                               └─────────────────┘
 ```
 
-### Memory統合の有効化
+## 開発ガイドライン
 
-`app/memory.py`に既にMemory統合の準備がありますが、現在は未接続です。有効にする場合は`app/main.py`で統合してください。
+### Git/ブランチ戦略
 
-## 🗂️ デプロイメントの仕組み
+すべての作業は別ワークツリーで実施し、マージ前にプルリクエストを作成してください。
 
-1. **ローカル開発**: `app/`ディレクトリでエージェントコードを開発
-2. **コンテナ化**: Dockerfileでイメージをビルド
-3. **ECRプッシュ**: AWSのECRリポジトリにイメージを保存
-4. **AgentCore**: TerraformでAgentCore Runtimeを作成し、ECRイメージを参照
-5. **実行**: AgentCoreがコンテナを起動し、`handler()`関数を呼び出し
+```bash
+# 新しいワークツリーを作成
+git worktree add -b feature/issue-XX ../terraform_agentcore-issue-XX
 
-## 📚 詳細ドキュメント
+# 作業完了後、PRを作成
+gh pr create --title "Issue #XX対応" --body "変更内容"
+```
 
-より詳細な技術情報は`CLAUDE.md`を参照してください。
+### テスト方針
 
-## 🐛 トラブルシューティング
+- モックはなるべく使用せず、実際の環境でテストすることを優先
+- 課金が発生する外部サービスのみモックを許可
+
+詳細は`CLAUDE.md`を参照してください。
+
+## トラブルシューティング
+
+### AWS認証エラー
+
+```bash
+# AWS SSOで再認証
+aws login
+```
 
 ### ECRログインエラー
 
 ```bash
-# 手動でECRにログイン
 make login
 ```
 
-### Terraformエラー
+### AgentCore Runtimeの状態確認
 
 ```bash
-# Terraformの状態をリセット
-cd terraform
-terraform init -reconfigure
+make get-runtime-info
 ```
 
-### イメージプッシュの失敗
-
-ECRリポジトリが先に作成されているか確認してください：
+### エンドポイント更新が反映されない
 
 ```bash
-make init
-make apply  # ECRリソースのみ適用
+make update-endpoint
 ```
 
-## 📄 ライセンス
+## ドキュメント
+
+- `CLAUDE.md` - 開発ガイダンス、コーディング規約
+- `.claude/agents/` - サブエージェント定義
+
+## ライセンス
 
 このプロジェクトは個人プロジェクトです。
