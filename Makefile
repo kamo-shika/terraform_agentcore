@@ -8,11 +8,63 @@ ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
 ECR_URL = $(ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com
 IMAGE_URI = $(ECR_URL)/$(REPO_NAME):latest
 
-.PHONY: init plan apply destroy login build push deploy deploy-init setup test test-cov ci-test update-endpoint get-runtime-info
+.PHONY: init plan apply destroy login build push deploy deploy-init setup test test-cov ci-test update-endpoint get-runtime-info lint format validate-tf clean help
+
+# --- Help ---
+help:
+	@echo "使用可能なターゲット:"
+	@echo ""
+	@echo "  ローカル開発:"
+	@echo "    setup          - 依存関係をインストール (uv sync)"
+	@echo "    lint           - ruffでコード検査"
+	@echo "    format         - ruffでコードフォーマット"
+	@echo "    clean          - ビルド成果物を削除"
+	@echo ""
+	@echo "  テスト:"
+	@echo "    test           - テストを実行"
+	@echo "    test-cov       - カバレッジ付きでテストを実行"
+	@echo "    ci-test        - CI用テスト (XML レポート出力)"
+	@echo ""
+	@echo "  Terraform:"
+	@echo "    init           - terraform init"
+	@echo "    plan           - terraform plan"
+	@echo "    apply          - terraform apply"
+	@echo "    destroy        - terraform destroy"
+	@echo "    validate-tf    - terraform validate"
+	@echo ""
+	@echo "  Docker / ECR:"
+	@echo "    login          - ECRにログイン"
+	@echo "    build          - Dockerイメージをビルド"
+	@echo "    push           - ECRにイメージをプッシュ"
+	@echo ""
+	@echo "  デプロイ:"
+	@echo "    deploy         - イメージをプッシュしてTerraformを適用"
+	@echo "    deploy-init    - 初回デプロイ (ECR作成 → イメージプッシュ → Agent作成)"
+	@echo ""
+	@echo "  AgentCore:"
+	@echo "    update-endpoint  - DEFAULTエンドポイントを最新バージョンに更新"
+	@echo "    get-runtime-info - Runtime情報とエンドポイント状態を表示"
 
 # --- Local Development ---
 setup:
 	uv sync
+
+lint:
+	uv run ruff check app/ tests/
+
+format:
+	uv run ruff format app/ tests/
+	uv run ruff check --fix app/ tests/
+
+clean:
+	rm -rf .pytest_cache
+	rm -rf .ruff_cache
+	rm -rf .coverage
+	rm -rf htmlcov
+	rm -rf lambda_build
+	rm -f lambda_function_payload.zip
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
 
 # --- Testing ---
 test:
@@ -36,6 +88,9 @@ apply:
 
 destroy:
 	cd $(TF_DIR) && terraform destroy -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)"
+
+validate-tf:
+	cd $(TF_DIR) && terraform validate
 
 # --- Docker / ECR ---
 login:

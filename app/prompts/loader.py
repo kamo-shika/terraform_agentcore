@@ -5,9 +5,7 @@
 コードを変更せずにシステムプロンプトを簡単に修正できるようにします。
 """
 
-import os
 from pathlib import Path
-from typing import Optional
 
 PROMPTS_DIR = Path(__file__).parent
 
@@ -34,7 +32,7 @@ def load_prompt(name: str, **kwargs) -> str:
     if not prompt_path.exists():
         raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
 
-    with open(prompt_path, 'r', encoding='utf-8') as f:
+    with open(prompt_path, encoding="utf-8") as f:
         template = f.read()
 
     # 変数が提供されている場合は置換

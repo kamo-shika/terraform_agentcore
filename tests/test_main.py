@@ -3,8 +3,8 @@ app/main.pyのテスト。
 
 handler関数の動作を検証する。エージェント実行は課金が発生するためモックを使用。
 """
-import pytest
-from unittest.mock import patch, MagicMock
+
+from unittest.mock import MagicMock, patch
 
 
 class TestHandler:
