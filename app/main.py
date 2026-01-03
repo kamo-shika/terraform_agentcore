@@ -70,7 +70,15 @@ def build_s3_instruction(bucket: str, key: str) -> str:
 
     Returns:
         S3ファイル処理用の命令文字列（エージェントへの指示を含む）
+
+    Raises:
+        ValueError: bucketまたはkeyがNoneまたは空文字列の場合
     """
+    if not bucket:
+        raise ValueError("bucket is required and cannot be None or empty")
+    if not key:
+        raise ValueError("key is required and cannot be None or empty")
+
     return (
         f"S3バケット '{bucket}' のファイル '{key}' を読み取り、内容を要約してください。\n"
         f"use_awsツールを使用して以下のパラメータでファイルを取得してください:\n"
@@ -165,5 +173,11 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         return {"statusCode": 200, "body": {"response": response_text}}
     except Exception as e:
-        logger.error("Error running agent: %s", e)
+        # エラーのコンテキスト情報をログに出力
+        logger.error("Error running agent: %s", e, exc_info=True)
+
+        # エラーの種類に応じたログ出力
+        if "bucket" in str(e).lower() or "key" in str(e).lower():
+            logger.error("S3 parameter validation failed: %s", e)
+
         return {"statusCode": 500, "body": {"error": str(e)}}
