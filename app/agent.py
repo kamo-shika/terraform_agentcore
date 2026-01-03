@@ -1,5 +1,6 @@
 from strands import Agent
 from strands_tools import use_aws
+from .config import MODEL_ID
 
 
 def create_agent(session_manager=None, system_prompt=None):
@@ -17,7 +18,7 @@ def create_agent(session_manager=None, system_prompt=None):
 
     agent = Agent(
         name="S3FileProcessingAgent",
-        model="jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        model=MODEL_ID,
         system_prompt=system_prompt or default_prompt,
         tools=[use_aws],  # S3操作用のAWSツールを追加
         session_manager=session_manager,

@@ -4,6 +4,7 @@ import os
 from .agent import create_agent
 from .memory import create_memory
 from .prompts import load_prompt
+from .config import get_memory_id, get_session_id, get_actor_id, get_input_text, REGION
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,10 +19,10 @@ def handler(event, context):
     logger.info("Received event: %s", event)
 
     try:
-        # Memory設定の読み取り（環境変数から）
-        memory_id = os.getenv("AGENTCORE_MEMORY_ID")
-        session_id = event.get("sessionId") or os.getenv("SESSION_ID", "local-session-001")
-        actor_id = event.get("actorId") or os.getenv("ACTOR_ID", "local-user")
+        # Memory設定の読み取り（configモジュールから）
+        memory_id = get_memory_id()
+        session_id = get_session_id(event)
+        actor_id = get_actor_id(event)
 
         # session_managerの作成（memory_idがある場合のみ）
         session_manager = None
@@ -37,7 +38,7 @@ def handler(event, context):
         # Check if this is an S3 file processing request
         s3_info = event.get("s3_info")
         system_prompt = None
-        user_input = event.get("input", {}).get("text", "Hello")
+        user_input = get_input_text(event)
 
         if s3_info:
             # S3 file processing mode
@@ -61,7 +62,7 @@ def handler(event, context):
                 f"- service_name: 's3'\n"
                 f"- operation_name: 'get_object'\n"
                 f"- parameters: {{'Bucket': '{bucket}', 'Key': '{key}'}}\n"
-                f"- region: 'ap-northeast-1'"
+                f"- region: '{REGION}'"
             )
 
         # Agentの作成

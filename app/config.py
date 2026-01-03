@@ -1,0 +1,107 @@
+"""
+アプリケーション全体で使用される設定値の一元管理モジュール。
+
+このモジュールは、環境変数から設定値を読み取り、デフォルト値を提供する。
+設定値は定数として定義され、実行時に動的に値を取得するヘルパー関数も提供する。
+"""
+import os
+from typing import Optional
+
+
+# ========================================
+# 定数定義
+# ========================================
+
+# モデルID: 使用するClaude AIモデルの識別子
+MODEL_ID = os.getenv("MODEL_ID", "jp.anthropic.claude-sonnet-4-5-20250929-v1:0")
+
+# リージョン: AWSリソースのデプロイ先リージョン
+REGION = os.getenv("AWS_REGION", "ap-northeast-1")
+
+# デフォルトセッションID: ローカル開発用のセッション識別子
+DEFAULT_SESSION_ID = os.getenv("SESSION_ID", "local-session-001")
+
+# デフォルトアクターID: ローカル開発用のユーザー識別子
+DEFAULT_ACTOR_ID = os.getenv("ACTOR_ID", "local-user")
+
+# デフォルト入力テキスト: エージェントへのデフォルト入力
+DEFAULT_INPUT_TEXT = os.getenv("DEFAULT_INPUT_TEXT", "Hello")
+
+
+# ========================================
+# ヘルパー関数
+# ========================================
+
+def get_session_id(event: dict) -> str:
+    """
+    セッションIDを取得する。
+
+    優先順位:
+    1. イベントのsessionIdキー
+    2. 環境変数SESSION_ID
+    3. DEFAULT_SESSION_ID定数
+
+    Args:
+        event: AgentCoreから渡されるイベント辞書
+
+    Returns:
+        セッションID文字列
+    """
+    return event.get("sessionId") or os.getenv("SESSION_ID") or DEFAULT_SESSION_ID
+
+
+def get_actor_id(event: dict) -> str:
+    """
+    アクターIDを取得する。
+
+    優先順位:
+    1. イベントのactorIdキー
+    2. 環境変数ACTOR_ID
+    3. DEFAULT_ACTOR_ID定数
+
+    Args:
+        event: AgentCoreから渡されるイベント辞書
+
+    Returns:
+        アクターID文字列
+    """
+    return event.get("actorId") or os.getenv("ACTOR_ID") or DEFAULT_ACTOR_ID
+
+
+def get_input_text(event: dict) -> str:
+    """
+    入力テキストを取得する。
+
+    優先順位:
+    1. イベントのinput.textキー
+    2. 環境変数DEFAULT_INPUT_TEXT
+    3. デフォルト値 "Hello"
+
+    Args:
+        event: AgentCoreから渡されるイベント辞書
+
+    Returns:
+        入力テキスト文字列
+    """
+    input_obj = event.get("input", {})
+    text = input_obj.get("text", "")
+    if text:
+        return text
+
+    # 環境変数を確認（テスト時の動的な変更を反映するため）
+    env_text = os.getenv("DEFAULT_INPUT_TEXT")
+    if env_text:
+        return env_text
+
+    # 最終的なデフォルト値
+    return "Hello"
+
+
+def get_memory_id() -> Optional[str]:
+    """
+    メモリIDを環境変数から取得する。
+
+    Returns:
+        環境変数AGENTCORE_MEMORY_IDの値、設定されていない場合はNone
+    """
+    return os.getenv("AGENTCORE_MEMORY_ID")
