@@ -140,6 +140,95 @@ AgentCoreは以下の形式のイベントで呼び出します：
 }
 ```
 
+## Git/ブランチ戦略
+
+**重要**: すべての作業は別ワークツリーで実施し、マージ前にプルリクエストを作成してください。
+
+### ワークフロー
+
+1. **別ワークツリーの作成**
+   ```bash
+   # Issue番号に基づいたブランチ名で別ワークツリー作成
+   git worktree add -b feature/issue-XX-description ../terraform_agentcore-issue-XX
+   cd ../terraform_agentcore-issue-XX
+   ```
+
+2. **作業実施** - コードの実装・修正・テスト
+
+3. **変更のコミット**
+   ```bash
+   git add .
+   git status
+   git diff --staged
+   git commit -m "[Issue #XX] 変更内容の要約"
+   ```
+
+4. **プルリクエスト作成**
+   ```bash
+   git push -u origin feature/issue-XX-description
+   gh pr create --title "Issue #XX対応: タイトル" --body "変更内容の説明"
+   ```
+
+5. **ワークツリーのクリーンアップ（マージ後）**
+   ```bash
+   cd ../terraform_agentcore
+   git worktree remove ../terraform_agentcore-issue-XX
+   git branch -d feature/issue-XX-description
+   git pull origin main
+   ```
+
+## テスト
+
+### テストコマンド
+```bash
+# 全テストを実行
+make test                    # uv run pytest tests/ -v
+
+# カバレッジ付きでテストを実行
+make test-cov                # uv run pytest tests/ --cov=app --cov-report=term-missing
+```
+
+### テスト方針
+
+**重要原則**: モックはなるべく使用せず、実際の環境でテストすることを優先してください。
+
+- **実際のコードで動作確認**: 可能な限り実装されたコードそのものをテスト
+- **インテグレーションテスト**: コンポーネント間の統合も実際に動作確認
+- **エンドツーエンドテスト**: 実際のユースケースに沿った動作確認
+
+**モックを使用してよい場合（最小限）**:
+- 課金が発生する外部サービス（EC2起動、S3への大量書き込みなど）
+- 制御できない外部依存（サードパーティAPIなど）
+- 時間がかかりすぎる処理（数分以上）
+
+**避けるべきモックの使用**:
+- 自分たちのコード内の関数をモック化する
+- boto3クライアントを安易にモック化する
+- テストの簡便さのためだけにモックを使用する
+
+## サブエージェント
+
+このプロジェクトでは、専門領域ごとにサブエージェントを定義しています。
+
+### エージェント一覧
+
+| エージェント | 専門領域 | 定義ファイル |
+|-------------|---------|-------------|
+| `terraform-specialist` | Terraform/AWSインフラ構築、IAM設計 | `.claude/agents/terraform-specialist.md` |
+| `python-developer` | Pythonアプリケーション、Lambda関数実装 | `.claude/agents/python-developer.md` |
+| `strands-agent-developer` | Strands Agents、AgentCore統合 | `.claude/agents/strands-agent-developer.md` |
+| `integrator` | 統合検証、デプロイ確認 | `.claude/agents/integrator.md` |
+| `test-specialist` | TDD、テスト実装、カバレッジ分析 | `.claude/agents/test-specialist.md` |
+| `cloudwatch-investigator` | CloudWatchログ調査、エラー分析 | `.claude/agents/cloudwatch-investigator.md` |
+
+### 使用方法
+
+```
+Task(subagent_type="python-developer", prompt="xxx機能を実装してください")
+```
+
+各エージェントは上記の「Git/ブランチ戦略」に従って作業します。
+
 ## コーディング規約
 
 ### コメントとドキュメント

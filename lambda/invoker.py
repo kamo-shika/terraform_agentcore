@@ -176,7 +176,8 @@ def invoke_agent_runtime(
         )
 
         # ストリーミングレスポンスを処理
-        event_stream = response.get('completion')
+        # AgentCore Runtimeは'response'フィールドを返す（'completion'ではない）
+        event_stream = response.get('response')
         complete_response = process_event_stream(event_stream)
 
         logger.info(f"Agent response: {complete_response[:500]}...")
@@ -193,48 +194,36 @@ def invoke_agent_runtime(
 
 def process_event_stream(event_stream) -> str:
     """
-    AgentCore Runtimeからのストリーミングレスポンスを処理します。
+    AgentCore RuntimeからのStreamingBodyレスポンスを処理します。
 
     Args:
-        event_stream: InvokeAgentRuntimeレスポンスのイベントストリーム
+        event_stream: InvokeAgentRuntimeレスポンスのStreamingBody
 
     Returns:
         完全なレスポンステキスト
     """
-    response_parts = []
-
     try:
-        for event in event_stream:
-            # ストリーム内の異なるイベントタイプを処理
-            if 'chunk' in event:
-                chunk = event['chunk']
+        # StreamingBodyからデータを読み取り
+        response_data = event_stream.read()
 
-                # チャンクからテキストを抽出
-                if 'bytes' in chunk:
-                    chunk_text = chunk['bytes'].decode('utf-8')
-                    response_parts.append(chunk_text)
-                    logger.debug(f"Received chunk: {chunk_text}")
+        # バイトデータを文字列にデコード
+        response_text = response_data.decode('utf-8')
+        logger.debug(f"Received response: {response_text}")
 
-            elif 'trace' in event:
-                # デバッグ用のトレースイベントを処理
-                logger.debug(f"Trace event: {event['trace']}")
-
-            elif 'internalServerException' in event:
-                error = event['internalServerException']
-                raise Exception(f"Internal server error: {error.get('message')}")
-
-            elif 'validationException' in event:
-                error = event['validationException']
-                raise Exception(f"Validation error: {error.get('message')}")
-
-            elif 'throttlingException' in event:
-                error = event['throttlingException']
-                raise Exception(f"Throttling error: {error.get('message')}")
+        # JSONレスポンスをパース
+        try:
+            response_json = json.loads(response_text)
+            # AgentCoreの標準レスポンス形式: {"response": "...", "status": "success"}
+            if 'response' in response_json:
+                return response_json['response']
+            else:
+                # JSONにresponseフィールドがない場合は、全体を返す
+                return response_text
+        except json.JSONDecodeError:
+            # JSONパースに失敗した場合は、生のテキストを返す
+            logger.warning("Response is not valid JSON, returning raw text")
+            return response_text
 
     except Exception as e:
         logger.error(f"Error processing event stream: {e}")
         raise
-
-    # すべてのレスポンスパーツを結合
-    complete_response = ''.join(response_parts)
-    return complete_response if complete_response else "No response from agent"
