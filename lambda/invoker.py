@@ -12,6 +12,7 @@ S3イベントを受信してAgentCore Runtimeを呼び出すLambda関数。
 import json
 import os
 import logging
+import re
 from typing import Dict, Any
 import boto3
 from botocore.exceptions import ClientError
@@ -27,6 +28,50 @@ bedrock_agentcore = boto3.client('bedrock-agentcore')
 # 環境変数
 AGENT_RUNTIME_ARN = os.environ.get('AGENT_RUNTIME_ARN')
 AGENTCORE_MEMORY_ID = os.environ.get('AGENTCORE_MEMORY_ID')
+
+
+def sanitize_session_id(value: str) -> str:
+    """
+    sessionIdをAgentCore Memory APIの正規表現パターンに準拠させる。
+
+    パターン: [a-zA-Z0-9][a-zA-Z0-9-_]*
+    - 最初の文字は英数字
+    - 以降は英数字、ハイフン、アンダースコアのみ
+
+    Args:
+        value: 元のsessionId
+
+    Returns:
+        サニタイズされたsessionId
+    """
+    # 許可されていない文字をアンダースコアに置換
+    sanitized = re.sub(r'[^a-zA-Z0-9-_]', '_', value)
+    # 最初の文字が英数字でない場合、プレフィックスを追加
+    if sanitized and not sanitized[0].isalnum():
+        sanitized = 's' + sanitized
+    return sanitized or 'session'
+
+
+def sanitize_actor_id(value: str) -> str:
+    """
+    actorIdをAgentCore Memory APIの正規表現パターンに準拠させる。
+
+    パターン: [a-zA-Z0-9][a-zA-Z0-9-_/]*(?::[a-zA-Z0-9-_/]+)*[a-zA-Z0-9-_/]*
+    - 最初の文字は英数字
+    - 以降は英数字、ハイフン、アンダースコア、スラッシュ
+
+    Args:
+        value: 元のactorId
+
+    Returns:
+        サニタイズされたactorId
+    """
+    # 許可されていない文字をアンダースコアに置換
+    sanitized = re.sub(r'[^a-zA-Z0-9-_/:]', '_', value)
+    # 最初の文字が英数字でない場合、プレフィックスを追加
+    if sanitized and not sanitized[0].isalnum():
+        sanitized = 'u' + sanitized
+    return sanitized or 'anonymous'
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -103,8 +148,12 @@ def process_s3_record(record: Dict[str, Any], context: Any) -> Dict[str, Any]:
         logger.warning(f"Could not get metadata for {bucket_name}/{object_key}: {e}")
         user_id = 'anonymous'
 
-    # ファイルパスに基づいてセッションIDを作成
-    session_id = f"{bucket_name}/{object_key}".replace('/', '_')
+    # ファイルパスに基づいてセッションIDを作成（サニタイズ適用）
+    raw_session_id = f"{bucket_name}/{object_key}".replace('/', '_')
+    session_id = sanitize_session_id(raw_session_id)
+    actor_id = sanitize_actor_id(user_id)
+
+    logger.info(f"Sanitized IDs - sessionId: {session_id}, actorId: {actor_id}")
 
     # S3情報を含むエージェント用の入力ペイロードを作成
     input_payload = {
@@ -116,7 +165,7 @@ def process_s3_record(record: Dict[str, Any], context: Any) -> Dict[str, Any]:
             "key": object_key
         },
         "sessionId": session_id,
-        "actorId": user_id
+        "actorId": actor_id
     }
 
     # AgentCore Runtimeを呼び出し
@@ -131,7 +180,7 @@ def process_s3_record(record: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'bucket': bucket_name,
             'key': object_key,
             'event': event_name,
-            'user_id': user_id,
+            'user_id': actor_id,
             'agent_response': response,
             'session_id': session_id
         }

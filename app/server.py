@@ -7,6 +7,7 @@ FastAPI HTTPサーバー - Bedrock AgentCore Runtime用。
 """
 
 import logging
+import os
 from typing import Dict, Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -79,7 +80,8 @@ async def invocations(request: Request) -> JSONResponse:
         # AgentCore期待値: {"response": "...", "status": "success"}
         if result.get("statusCode") == 200:
             response_body = result.get("body", {})
-            agentcore_response = {"response": response_body.get("response", ""), "status": "success"}
+            response_text = response_body.get("response", "")
+            agentcore_response = {"response": response_text, "status": "success"}
             return JSONResponse(content=agentcore_response)
         else:
             # エラーの場合
@@ -105,6 +107,31 @@ async def root() -> Dict[str, Any]:
         "service": "AgentCore Runtime Server",
         "status": "running",
         "endpoints": {"health": "/ping", "invocations": "/invocations (POST)"},
+    }
+
+
+@app.get("/debug")
+async def debug() -> Dict[str, Any]:
+    """
+    デバッグ用エンドポイント。環境変数とメモリ設定を返す。
+
+    Returns:
+        環境変数とメモリ設定の情報を含む辞書
+    """
+    from .config import get_memory_id, LTM_ENABLED, LTM_NAMESPACE
+
+    memory_id = get_memory_id()
+    return {
+        "env": {
+            "AGENTCORE_MEMORY_ID": os.getenv("AGENTCORE_MEMORY_ID", "NOT SET"),
+            "LTM_ENABLED": os.getenv("LTM_ENABLED", "NOT SET"),
+        },
+        "config": {
+            "memory_id": memory_id,
+            "ltm_enabled": LTM_ENABLED,
+            "ltm_namespace": LTM_NAMESPACE,
+        },
+        "memory_initialized": memory_id is not None and len(memory_id) > 0,
     }
 
 
