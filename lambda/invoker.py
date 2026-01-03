@@ -13,7 +13,8 @@ import json
 import os
 import logging
 import re
-from typing import Dict, Any
+from datetime import datetime, timezone
+from typing import Dict, Any, Optional
 import boto3
 from botocore.exceptions import ClientError
 
@@ -28,6 +29,7 @@ bedrock_agentcore = boto3.client('bedrock-agentcore')
 # 環境変数
 AGENT_RUNTIME_ARN = os.environ.get('AGENT_RUNTIME_ARN')
 AGENTCORE_MEMORY_ID = os.environ.get('AGENTCORE_MEMORY_ID')
+OUTPUT_BUCKET = os.environ.get('OUTPUT_BUCKET')
 
 
 def sanitize_session_id(value: str) -> str:
@@ -72,6 +74,73 @@ def sanitize_actor_id(value: str) -> str:
     if sanitized and not sanitized[0].isalnum():
         sanitized = 'u' + sanitized
     return sanitized or 'anonymous'
+
+
+def save_response_to_s3(
+    bucket_name: str,
+    object_key: str,
+    session_id: str,
+    actor_id: str,
+    input_text: str,
+    response_text: str
+) -> Optional[str]:
+    """
+    エージェントの応答をS3に保存する。
+
+    Args:
+        bucket_name: 入力ファイルのバケット名
+        object_key: 入力ファイルのオブジェクトキー
+        session_id: セッションID
+        actor_id: アクターID
+        input_text: エージェントへの入力テキスト
+        response_text: エージェントからの応答テキスト
+
+    Returns:
+        保存先のS3 URIまたはNone（保存に失敗した場合）
+    """
+    if not OUTPUT_BUCKET:
+        logger.warning("OUTPUT_BUCKET is not set, skipping response save")
+        return None
+
+    try:
+        # タイムスタンプを生成
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+
+        # 出力ファイルのキーを生成
+        # outputs/{timestamp}_{session_id}.json
+        output_key = f"outputs/{timestamp}_{session_id}.json"
+
+        # 保存するデータを構築
+        output_data = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "session_id": session_id,
+            "actor_id": actor_id,
+            "source": {
+                "bucket": bucket_name,
+                "key": object_key
+            },
+            "input": input_text,
+            "response": response_text
+        }
+
+        # S3に保存
+        s3_client.put_object(
+            Bucket=OUTPUT_BUCKET,
+            Key=output_key,
+            Body=json.dumps(output_data, ensure_ascii=False, indent=2),
+            ContentType='application/json'
+        )
+
+        output_uri = f"s3://{OUTPUT_BUCKET}/{output_key}"
+        logger.info(f"Response saved to {output_uri}")
+        return output_uri
+
+    except ClientError as e:
+        logger.error(f"Failed to save response to S3: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error saving response: {e}")
+        return None
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -176,13 +245,25 @@ def process_s3_record(record: Dict[str, Any], context: Any) -> Dict[str, Any]:
             payload=input_payload
         )
 
+        # エージェント応答をS3に保存
+        input_text = input_payload.get('input', {}).get('text', '')
+        output_uri = save_response_to_s3(
+            bucket_name=bucket_name,
+            object_key=object_key,
+            session_id=session_id,
+            actor_id=actor_id,
+            input_text=input_text,
+            response_text=response
+        )
+
         return {
             'bucket': bucket_name,
             'key': object_key,
             'event': event_name,
             'user_id': actor_id,
             'agent_response': response,
-            'session_id': session_id
+            'session_id': session_id,
+            'output_uri': output_uri
         }
 
     except ClientError as e:

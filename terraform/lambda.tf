@@ -19,6 +19,7 @@ resource "aws_lambda_function" "invoker" {
     variables = {
       AGENT_RUNTIME_ARN   = aws_bedrockagentcore_agent_runtime.main.agent_runtime_arn
       AGENTCORE_MEMORY_ID = aws_bedrockagentcore_memory.main.id
+      OUTPUT_BUCKET       = aws_s3_bucket.trigger.bucket
     }
   }
 
@@ -79,6 +80,14 @@ resource "aws_iam_policy" "lambda_policy" {
           "s3:HeadObject"
         ]
         Resource = "${aws_s3_bucket.trigger.arn}/*"
+      },
+      {
+        # エージェント応答をS3に出力するための権限
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject"
+        ]
+        Resource = "${aws_s3_bucket.trigger.arn}/outputs/*"
       },
       {
         Effect = "Allow"
