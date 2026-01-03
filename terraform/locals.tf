@@ -38,4 +38,8 @@ locals {
 
   # CloudWatch Logs
   lambda_log_group_name = "/aws/lambda/${local.lambda_function_name}"
+
+  # Memory Observability
+  # vendedlogsプレフィックスはAWSのマネージドサービスログ用の標準パス
+  memory_log_group_name = "/aws/vendedlogs/bedrock-agentcore/${local.memory_name}"
 }
