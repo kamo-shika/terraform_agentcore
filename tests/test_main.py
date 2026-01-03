@@ -176,6 +176,56 @@ class TestHandler:
             # Noneの場合は空文字列になる
             assert result["body"]["response"] == ""
 
+    def test_handler_with_invalid_s3_info(self, mock_context, clean_env):
+        """
+        s3_info.bucket/keyがNoneの場合のエラー処理を確認。
+
+        S3情報が不完全な場合、適切にエラーハンドリングされることを検証。
+
+        Args:
+            mock_context: モックコンテキスト
+            clean_env: 環境変数をクリーンにするフィクスチャ
+        """
+        from app.main import handler
+
+        # bucketがNoneのケース
+        event_none_bucket = {
+            "input": {"text": ""},
+            "s3_info": {
+                "bucket": None,
+                "key": "test-key"
+            }
+        }
+
+        with patch("app.main.create_agent") as mock_create_agent:
+            mock_agent = MagicMock()
+            mock_create_agent.return_value = mock_agent
+
+            result = handler(event_none_bucket, mock_context)
+
+            # エラー時は500を返す
+            assert result["statusCode"] == 500
+            assert "error" in result["body"]
+
+        # keyがNoneのケース
+        event_none_key = {
+            "input": {"text": ""},
+            "s3_info": {
+                "bucket": "test-bucket",
+                "key": None
+            }
+        }
+
+        with patch("app.main.create_agent") as mock_create_agent:
+            mock_agent = MagicMock()
+            mock_create_agent.return_value = mock_agent
+
+            result = handler(event_none_key, mock_context)
+
+            # エラー時は500を返す
+            assert result["statusCode"] == 500
+            assert "error" in result["body"]
+
 
 class TestParseEvent:
     """parse_event関数のテストクラス。"""
@@ -369,6 +419,50 @@ class TestBuildS3Instruction:
 
         # REGIONはap-northeast-1がデフォルト
         assert "region" in result.lower()
+
+    def test_build_s3_instruction_with_none_bucket(self):
+        """
+        bucket=Noneの場合にValueErrorが発生することを確認。
+
+        S3バケット名は必須パラメータであり、Noneの場合はエラーとなるべき。
+        """
+        from app.main import build_s3_instruction
+
+        with pytest.raises(ValueError, match="bucket.*required|bucket.*None"):
+            build_s3_instruction(None, "test-key")
+
+    def test_build_s3_instruction_with_none_key(self):
+        """
+        key=Noneの場合にValueErrorが発生することを確認。
+
+        S3オブジェクトキーは必須パラメータであり、Noneの場合はエラーとなるべき。
+        """
+        from app.main import build_s3_instruction
+
+        with pytest.raises(ValueError, match="key.*required|key.*None"):
+            build_s3_instruction("test-bucket", None)
+
+    def test_build_s3_instruction_with_empty_bucket(self):
+        """
+        bucket=""の場合にValueErrorが発生することを確認。
+
+        空文字列のバケット名は無効であり、エラーとなるべき。
+        """
+        from app.main import build_s3_instruction
+
+        with pytest.raises(ValueError, match="bucket.*empty|bucket.*required"):
+            build_s3_instruction("", "test-key")
+
+    def test_build_s3_instruction_with_empty_key(self):
+        """
+        key=""の場合にValueErrorが発生することを確認。
+
+        空文字列のキーは無効であり、エラーとなるべき。
+        """
+        from app.main import build_s3_instruction
+
+        with pytest.raises(ValueError, match="key.*empty|key.*required"):
+            build_s3_instruction("test-bucket", "")
 
 
 class TestRunAgent:

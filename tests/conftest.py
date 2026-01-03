@@ -154,3 +154,87 @@ def set_memory_env(monkeypatch):
         monkeypatch.setenv("ACTOR_ID", actor_id)
 
     return _set_env
+
+
+@pytest.fixture
+def s3_event_with_invalid_bucket():
+    """
+    S3情報のbucketが不正なイベント。
+
+    エラーハンドリングのテストに使用する。
+
+    Returns:
+        dict: bucketがNoneのS3イベント
+    """
+    return {
+        "input": {
+            "text": ""
+        },
+        "s3_info": {
+            "bucket": None,
+            "key": "test-key"
+        }
+    }
+
+
+@pytest.fixture
+def s3_event_with_invalid_key():
+    """
+    S3情報のkeyが不正なイベント。
+
+    エラーハンドリングのテストに使用する。
+
+    Returns:
+        dict: keyがNoneのS3イベント
+    """
+    return {
+        "input": {
+            "text": ""
+        },
+        "s3_info": {
+            "bucket": "test-bucket",
+            "key": None
+        }
+    }
+
+
+@pytest.fixture
+def s3_event_with_empty_bucket():
+    """
+    S3情報のbucketが空文字列のイベント。
+
+    エラーハンドリングのテストに使用する。
+
+    Returns:
+        dict: bucketが空文字列のS3イベント
+    """
+    return {
+        "input": {
+            "text": ""
+        },
+        "s3_info": {
+            "bucket": "",
+            "key": "test-key"
+        }
+    }
+
+
+@pytest.fixture
+def s3_event_with_empty_key():
+    """
+    S3情報のkeyが空文字列のイベント。
+
+    エラーハンドリングのテストに使用する。
+
+    Returns:
+        dict: keyが空文字列のS3イベント
+    """
+    return {
+        "input": {
+            "text": ""
+        },
+        "s3_info": {
+            "bucket": "test-bucket",
+            "key": ""
+        }
+    }
