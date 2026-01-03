@@ -1,15 +1,21 @@
-# S3 Bucket for triggering AgentCore
+# ==============================================================================
+# S3 Bucket: Trigger Bucket
+# ==============================================================================
+# AgentCoreを起動するトリガーとなるS3バケット
+# ファイルがアップロードされるとLambda経由でAgentCoreが起動
 resource "aws_s3_bucket" "trigger" {
-  bucket = "${var.project_name}-trigger-bucket"
+  bucket = local.trigger_bucket_name
 
-  tags = {
-    Environment = "dev"
-    Project     = var.project_name
-    Purpose     = "AgentCore trigger bucket"
-  }
+  tags = merge(local.common_tags, {
+    Purpose = "AgentCore trigger bucket"
+  })
 }
 
-# Enable versioning for the trigger bucket
+# ==============================================================================
+# S3 Bucket Versioning
+# ==============================================================================
+# トリガーバケットのバージョニングを有効化
+# 誤削除や上書きからファイルを保護
 resource "aws_s3_bucket_versioning" "trigger" {
   bucket = aws_s3_bucket.trigger.id
 
@@ -18,7 +24,11 @@ resource "aws_s3_bucket_versioning" "trigger" {
   }
 }
 
-# Block public access to the trigger bucket
+# ==============================================================================
+# S3 Bucket Public Access Block
+# ==============================================================================
+# トリガーバケットへのパブリックアクセスをブロック
+# セキュリティベストプラクティスに従い、すべてのパブリックアクセスを遮断
 resource "aws_s3_bucket_public_access_block" "trigger" {
   bucket = aws_s3_bucket.trigger.id
 
@@ -28,14 +38,33 @@ resource "aws_s3_bucket_public_access_block" "trigger" {
   restrict_public_buckets = true
 }
 
-# S3 bucket notification to trigger Lambda
+# ==============================================================================
+# S3 Bucket Server-Side Encryption
+# ==============================================================================
+# トリガーバケットのサーバーサイド暗号化設定
+# AES256でデータを自動的に暗号化
+resource "aws_s3_bucket_server_side_encryption_configuration" "trigger" {
+  bucket = aws_s3_bucket.trigger.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# ==============================================================================
+# S3 Bucket Notification
+# ==============================================================================
+# S3バケットイベント通知設定
+# 指定した拡張子のファイルが作成されるとLambda関数を起動
 resource "aws_s3_bucket_notification" "trigger" {
   bucket = aws_s3_bucket.trigger.id
 
   lambda_function {
     lambda_function_arn = aws_lambda_function.invoker.arn
     events              = ["s3:ObjectCreated:*"]
-    filter_suffix       = ".txt"
+    filter_suffix       = var.s3_trigger_suffix
   }
 
   depends_on = [aws_lambda_permission.s3]
