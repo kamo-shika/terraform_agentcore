@@ -13,8 +13,8 @@ resource "aws_lambda_function" "invoker" {
 
   environment {
     variables = {
-      AGENT_RUNTIME_ARN = aws_bedrockagentcore_agent_runtime.main.agent_runtime_arn
-      AGENTCORE_MEMORY_ID   = aws_bedrockagentcore_memory.main.id
+      AGENT_RUNTIME_ARN   = aws_bedrockagentcore_agent_runtime.main.agent_runtime_arn
+      AGENTCORE_MEMORY_ID = aws_bedrockagentcore_memory.main.id
     }
   }
 

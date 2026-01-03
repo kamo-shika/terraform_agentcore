@@ -1,4 +1,5 @@
 # Agent Core Runtime Resource
+# terraform_data.image_digest_triggerの変更でリソース更新がトリガーされる
 resource "aws_bedrockagentcore_agent_runtime" "main" {
   agent_runtime_name = "${var.project_name}_runtime"
   role_arn           = aws_iam_role.agent_role.arn
@@ -16,6 +17,11 @@ resource "aws_bedrockagentcore_agent_runtime" "main" {
   tags = {
     Environment = "dev"
     Project     = var.project_name
+  }
+
+  # イメージダイジェストが変わったらリソースを更新
+  lifecycle {
+    replace_triggered_by = [terraform_data.image_digest_trigger]
   }
 }
 

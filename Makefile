@@ -55,8 +55,10 @@ push: login build
 	docker push $(IMAGE_URI)
 
 # --- Workflow ---
-# Apply Terraform changes AND push new image
-deploy: apply push
+# Push new image AND apply Terraform changes
+# 重要: イメージをpushしてからapplyすることで、data.aws_ecr_image.latestが
+# 最新のダイジェストを取得し、AgentCore Runtimeが更新される
+deploy: push apply
 
 # Initial deployment: Create ECR -> Push Image -> Create Agent
 deploy-init:

@@ -19,3 +19,8 @@ output "ecr_repository_url" {
   value       = aws_ecr_repository.main.repository_url
   description = "ECR Repository URL"
 }
+
+output "current_image_digest" {
+  value       = data.aws_ecr_image.latest.image_digest
+  description = "現在デプロイされているイメージのダイジェスト"
+}
