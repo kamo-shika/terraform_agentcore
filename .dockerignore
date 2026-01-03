@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv
+venv
+ENV
+env
+
+# Testing
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.nox
+coverage.xml
+*.cover
+.hypothesis
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Build artifacts
+*.egg-info
+dist
+build
+lambda_build
+lambda_function_payload.zip
+
+# Terraform
+terraform/
+.terraform
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+# Documentation
+*.md
+docs/
+
+# Lambda (別のデプロイメント)
+lambda/
+
+# Development
+.ruff_cache
+.mypy_cache
+
+# Misc
+.DS_Store
+Thumbs.db
+*.log
