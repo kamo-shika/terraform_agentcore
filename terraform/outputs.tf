@@ -1,8 +1,8 @@
-# Outputs for local testing and reference
+# 出力値（ローカルテストや参照用）
 
 output "memory_id" {
   value       = aws_bedrockagentcore_memory.main.id
-  description = "AgentCore Memory ID for local testing"
+  description = "AgentCore Memory ID（ローカルテスト用）"
 }
 
 output "runtime_arn" {
@@ -17,7 +17,7 @@ output "runtime_id" {
 
 output "ecr_repository_url" {
   value       = aws_ecr_repository.main.repository_url
-  description = "ECR Repository URL"
+  description = "ECRリポジトリURL"
 }
 
 output "current_image_digest" {
