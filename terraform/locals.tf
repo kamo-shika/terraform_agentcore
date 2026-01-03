@@ -42,4 +42,10 @@ locals {
   # Memory Observability
   # vendedlogsプレフィックスはAWSのマネージドサービスログ用の標準パス
   memory_log_group_name = "/aws/vendedlogs/bedrock-agentcore/${local.memory_name}"
+
+  # Runtime Observability
+  # APPLICATION_LOGS: エージェントの標準出力・エラーログ
+  # USAGE_LOGS: セッションレベルのCPU/メモリ使用量ログ
+  runtime_app_log_group_name   = "/aws/vendedlogs/bedrock-agentcore/runtime/${local.runtime_name}/APPLICATION_LOGS"
+  runtime_usage_log_group_name = "/aws/vendedlogs/bedrock-agentcore/runtime/${local.runtime_name}/USAGE_LOGS"
 }
