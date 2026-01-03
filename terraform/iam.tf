@@ -149,6 +149,7 @@ resource "aws_iam_policy" "agent_memory_access" {
           # メモリレコード操作（LTM/Semantic Memory）
           "bedrock-agentcore:ListMemoryRecords",
           "bedrock-agentcore:GetMemoryRecord",
+          "bedrock-agentcore:RetrieveMemoryRecords",
           "bedrock-agentcore:BatchCreateMemoryRecords",
           "bedrock-agentcore:BatchUpdateMemoryRecords",
           "bedrock-agentcore:BatchDeleteMemoryRecords",

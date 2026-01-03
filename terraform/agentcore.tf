@@ -58,6 +58,19 @@ resource "aws_bedrockagentcore_memory_strategy" "file_summary" {
 }
 
 # ==============================================================================
+# Bedrock AgentCore Memory Strategy - Semantic (Actor状態追跡)
+# ==============================================================================
+# Actorの活動状態を長期メモリとして蓄積するためのSemantic Memory Strategy
+# ファイル要約とは別に、Actorの直近の活動をまとめて保存する
+resource "aws_bedrockagentcore_memory_strategy" "actor_state" {
+  name        = "ActorStateTracker"
+  memory_id   = aws_bedrockagentcore_memory.main.id
+  type        = "SEMANTIC"
+  namespaces  = ["/actor-state/{actorId}"]
+  description = "Actorの活動状態を追跡し、直近の動きをまとめて保存するSemantic Memory Strategy"
+}
+
+# ==============================================================================
 # Bedrock AgentCore Runtime Endpoint - PROD
 # ==============================================================================
 # 本番環境用のカスタムエンドポイント
