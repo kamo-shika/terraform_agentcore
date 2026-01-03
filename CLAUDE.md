@@ -37,9 +37,6 @@
 ```bash
 # 依存関係のセットアップ
 make setup                    # uv syncで依存関係をインストール
-
-# エージェントをローカルで実行
-make run-local               # app/main.pyを直接実行してテスト
 ```
 
 ### Dockerビルドとプッシュ

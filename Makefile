@@ -8,20 +8,11 @@ ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
 ECR_URL = $(ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com
 IMAGE_URI = $(ECR_URL)/$(REPO_NAME):latest
 
-.PHONY: init plan apply destroy login build push deploy deploy-init setup run-local test test-cov ci-test update-endpoint get-runtime-info
+.PHONY: init plan apply destroy login build push deploy deploy-init setup test test-cov ci-test update-endpoint get-runtime-info
 
 # --- Local Development ---
 setup:
 	uv sync
-
-run-local:
-	@if [ -f .env.local ]; then \
-		echo "Loading environment variables from .env.local..."; \
-		export $$(cat .env.local | grep -v '^#' | xargs) && uv run python app/main.py; \
-	else \
-		echo "No .env.local file found. Running without memory configuration..."; \
-		uv run python app/main.py; \
-	fi
 
 # --- Testing ---
 test:
