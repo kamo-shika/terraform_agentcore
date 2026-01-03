@@ -55,7 +55,8 @@
 
       "Bash(aws login:*)",
       "Bash(aws sts get-caller-identity:*)",
-      "Bash(aws ecr describe-*:*)",
+      "Bash(aws ecr describe-repositories:*)",
+      "Bash(aws ecr describe-images:*)",
       "Bash(aws ecr get-login-password:*)",
       "Bash(aws s3 ls:*)",
       "Bash(aws s3 cp:*)",
@@ -64,8 +65,11 @@
       "Bash(aws logs describe-log-groups:*)",
       "Bash(aws logs filter-log-events:*)",
       "Bash(aws logs get-log-events:*)",
-      "Bash(aws bedrock-agentcore-control get-*:*)",
-      "Bash(aws bedrock-agentcore-control list-*:*)",
+      "Bash(aws bedrock-agentcore-control get-agent-runtime:*)",
+      "Bash(aws bedrock-agentcore-control get-memory:*)",
+      "Bash(aws bedrock-agentcore-control list-agent-runtimes:*)",
+      "Bash(aws bedrock-agentcore-control list-agent-runtime-endpoints:*)",
+      "Bash(aws bedrock-agentcore-control list-memories:*)",
 
       "Bash(docker images:*)",
       "Bash(docker ps:*)",
