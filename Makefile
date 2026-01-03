@@ -6,9 +6,16 @@ TF_DIR = terraform
 # AWS Account ID and ECR URL retrieval
 ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
 ECR_URL = $(ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com
-IMAGE_URI = $(ECR_URL)/$(REPO_NAME):latest
 
-.PHONY: init plan apply destroy login build push deploy deploy-init setup test test-cov ci-test update-endpoint get-runtime-info lint format validate-tf clean help
+# Git commit hash for image tagging
+GIT_COMMIT = $(shell git rev-parse --short HEAD)
+GIT_COMMIT_FULL = $(shell git rev-parse HEAD)
+
+# Image URIs with version tags
+IMAGE_URI_LATEST = $(ECR_URL)/$(REPO_NAME):latest
+IMAGE_URI_VERSIONED = $(ECR_URL)/$(REPO_NAME):$(GIT_COMMIT)
+
+.PHONY: init plan apply destroy login build push deploy deploy-init setup test test-cov ci-test update-endpoint get-runtime-info list-versions list-endpoints rollback lint format validate-tf clean help
 
 # --- Help ---
 help:
@@ -42,8 +49,11 @@ help:
 	@echo "    deploy-init    - 初回デプロイ (ECR作成 → イメージプッシュ → Agent作成)"
 	@echo ""
 	@echo "  AgentCore:"
-	@echo "    update-endpoint  - DEFAULTエンドポイントを最新バージョンに更新"
 	@echo "    get-runtime-info - Runtime情報とエンドポイント状態を表示"
+	@echo "    list-versions    - Runtime全バージョン一覧を表示"
+	@echo "    list-endpoints   - 全エンドポイント一覧を表示"
+	@echo "    update-endpoint  - DEFAULTエンドポイントを最新バージョンに更新"
+	@echo "    rollback VERSION=V1 - PRODエンドポイントを指定バージョンにロールバック"
 
 # --- Local Development ---
 setup:
@@ -107,8 +117,11 @@ build:
 	fi
 
 push: login build
-	docker tag $(REPO_NAME):latest $(IMAGE_URI)
-	docker push $(IMAGE_URI)
+	docker tag $(REPO_NAME):latest $(IMAGE_URI_LATEST)
+	docker tag $(REPO_NAME):latest $(IMAGE_URI_VERSIONED)
+	docker push $(IMAGE_URI_LATEST)
+	docker push $(IMAGE_URI_VERSIONED)
+	@echo "Pushed images with tags: latest, $(GIT_COMMIT)"
 
 # --- Workflow ---
 # Push new image AND apply Terraform changes
@@ -157,3 +170,44 @@ get-runtime-info:
 	aws bedrock-agentcore-control list-agent-runtime-endpoints \
 		--agent-runtime-id $(RUNTIME_ID) \
 		--region $(REGION)
+
+# Runtimeの全バージョン一覧を表示
+list-versions:
+	@if [ -z "$(RUNTIME_ID)" ]; then \
+		echo "Error: Could not get Runtime ID. Run 'make apply' first."; \
+		exit 1; \
+	fi
+	@echo "=== AgentCore Runtime Versions ==="
+	aws bedrock-agentcore-control list-agent-runtime-versions \
+		--agent-runtime-id $(RUNTIME_ID) \
+		--region $(REGION)
+
+# 全エンドポイント一覧を表示
+list-endpoints:
+	@if [ -z "$(RUNTIME_ID)" ]; then \
+		echo "Error: Could not get Runtime ID. Run 'make apply' first."; \
+		exit 1; \
+	fi
+	@echo "=== AgentCore Runtime Endpoints ==="
+	aws bedrock-agentcore-control list-agent-runtime-endpoints \
+		--agent-runtime-id $(RUNTIME_ID) \
+		--region $(REGION)
+
+# PRODエンドポイントを指定バージョンにロールバック
+# 使用法: make rollback VERSION=V1
+rollback:
+	@if [ -z "$(RUNTIME_ID)" ]; then \
+		echo "Error: Could not get Runtime ID. Run 'make apply' first."; \
+		exit 1; \
+	fi
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Error: VERSION is required. Usage: make rollback VERSION=V1"; \
+		exit 1; \
+	fi
+	@echo "Rolling back PROD endpoint to version $(VERSION)..."
+	aws bedrock-agentcore-control update-agent-runtime-endpoint \
+		--agent-runtime-id $(RUNTIME_ID) \
+		--endpoint-name PROD \
+		--agent-runtime-version $(VERSION) \
+		--region $(REGION)
+	@echo "Rollback initiated. Use 'make list-endpoints' to check status."

@@ -77,21 +77,32 @@ make deploy-init             # 1. ECRリポジトリを作成
 
 **通常のデプロイメント**（コード変更時）：
 ```bash
-make deploy                  # 1. 新しいイメージをビルド＆プッシュ
-                            # 2. Terraformを適用（イメージダイジェストの変更を検知）
+make deploy                  # 1. 新しいイメージをビルド＆プッシュ（latestとgit commit hashタグ）
+                            # 2. Terraformを適用（UpdateAgentRuntime APIでin-place更新）
 ```
 
-**イメージ変更検知の仕組み**：
-- `data.aws_ecr_image.latest`でECRイメージのダイジェストを取得
-- `terraform_data.image_digest_trigger`でダイジェスト変更を追跡
-- ダイジェストが変わると`lifecycle.replace_triggered_by`でAgentCore Runtimeが再作成される
-- `make deploy`は必ず`push → apply`の順序で実行される（ダイジェスト取得のため）
+**イメージ変更検知とバージョン管理の仕組み**：
+- ECRイメージには`latest`タグとGit commit hashタグ（例: `abc1234`）の両方が付与される
+- `container_uri`の変更時は`UpdateAgentRuntime` APIでin-place更新される（destroy→createではない）
+- 更新のたびにAgentCore Runtimeの新しいバージョン（V1, V2, V3...）が自動作成される
+- バージョン履歴は保持され、ロールバック可能
+- DEFAULTエンドポイントは自動的に最新バージョンを指す
 
-**AgentCoreエンドポイント管理**：
+**AgentCoreエンドポイント・バージョン管理**：
 ```bash
-make update-endpoint         # DEFAULTエンドポイントを最新バージョンに更新
 make get-runtime-info        # Runtime情報とエンドポイント状態を表示
+make list-versions           # Runtime全バージョン一覧を表示
+make list-endpoints          # 全エンドポイント一覧を表示
+make update-endpoint         # DEFAULTエンドポイントを最新バージョンに更新
+make rollback VERSION=V1     # PRODエンドポイントを指定バージョンにロールバック
 ```
+
+**PRODエンドポイントの有効化**：
+本番環境で手動バージョン管理が必要な場合、Terraformで有効化できます：
+```bash
+make apply -- -var="enable_prod_endpoint=true"
+```
+PRODエンドポイントはDEFAULTと異なり、明示的に`make rollback`を実行しない限りバージョンが変更されません。
 
 ### AWS認証
 
