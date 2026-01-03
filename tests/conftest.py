@@ -3,8 +3,26 @@ pytestの共通設定とフィクスチャ。
 
 このファイルでは、テスト全体で使用する共通のフィクスチャと設定を定義する。
 """
-import os
+
 import pytest
+from httpx import ASGITransport, AsyncClient
+
+from app.server import app as fastapi_app
+
+
+@pytest.fixture
+async def async_client():
+    """
+    FastAPIテスト用の非同期HTTPクライアント。
+
+    httpxのAsyncClientを使用してFastAPIエンドポイントをテストする。
+
+    Yields:
+        AsyncClient: FastAPIアプリに接続されたテストクライアント
+    """
+    transport = ASGITransport(app=fastapi_app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
 
 
 @pytest.fixture
