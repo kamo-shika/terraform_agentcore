@@ -218,3 +218,35 @@ def function_name(arg1: str, arg2: int) -> str:
 
 - 変数名や関数名は英語（Pythonの命名規則に従う）
 - インラインコメントも日本語で記載
+
+## オブザーバビリティ
+
+### OpenTelemetry設定
+
+AgentCore Runtimeとの統合オブザーバビリティのため、`aws-opentelemetry-distro`パッケージを使用しています。
+
+```python
+# pyproject.toml
+dependencies = [
+    ...
+    "aws-opentelemetry-distro>=0.12.2",  # AgentCore Observability用
+]
+```
+
+### トレース配信
+
+トレースデータはX-Rayに自動配信されます。設定は`terraform/observability.tf`で管理：
+
+- **Runtime TRACES**: InvokeAgentRuntimeなどのスパンデータ
+- **Memory TRACES**: CreateEvent, GetEvent, RetrieveMemoryRecordsなどのスパンデータ
+
+### ログ配信
+
+CloudWatch Logsに以下のログが配信されます：
+
+| ログタイプ | 用途 |
+|-----------|------|
+| APPLICATION_LOGS | エージェントの標準出力・エラーログ |
+| USAGE_LOGS | セッションレベルのCPU/メモリ使用量 |
+
+詳細なログ確認手順は [operations.md](./operations.md) を参照してください。

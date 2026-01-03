@@ -309,7 +309,77 @@ AgentCore APPLICATION_LOGSの `response_payload` フィールドは現在CloudWa
 エージェントの応答内容を確認するには：
 
 - **直接呼び出し**: 出力ファイル（`output.json`）を確認
-- **S3トリガー**: Lambdaログで `Agent response:` を検索
+- **S3トリガー**: S3出力ファイルまたはLambdaログで `Agent response:` を検索
+
+## S3出力ファイルの確認
+
+S3トリガー経由でエージェントを呼び出した場合、処理結果がS3に自動保存されます。
+
+### 出力ファイル一覧
+
+```bash
+# 出力バケットの内容を確認
+aws s3 ls s3://agentcore-trigger-bucket/outputs/
+```
+
+### 最新の出力ファイルを確認
+
+```bash
+# 最新の出力ファイルをダウンロードして表示
+LATEST_OUTPUT=$(aws s3 ls s3://agentcore-trigger-bucket/outputs/ --recursive | sort | tail -n 1 | awk '{print $4}')
+
+aws s3 cp "s3://agentcore-trigger-bucket/$LATEST_OUTPUT" - | jq .
+```
+
+### 出力ファイル形式
+
+```json
+{
+  "timestamp": "2026-01-03T12:00:00Z",
+  "session_id": "bucket_path_to_file",
+  "actor_id": "user-id-from-metadata",
+  "source": {
+    "bucket": "agentcore-trigger-bucket",
+    "key": "input/test.txt"
+  },
+  "input": "S3ファイルを処理してください: s3://...",
+  "response": "エージェントからの応答テキスト"
+}
+```
+
+### 特定のセッションの出力を検索
+
+```bash
+# セッションIDで検索
+aws s3 ls s3://agentcore-trigger-bucket/outputs/ | grep "session-id"
+```
+
+## Actor状態の確認
+
+エージェントが保存したActor状態を確認します。
+
+### Actor状態レコード一覧
+
+```bash
+MEMORY_ID=$(cd terraform && terraform output -raw memory_id)
+
+# 特定のActorの状態を確認
+aws bedrock-agentcore list-memory-records \
+    --memory-id $MEMORY_ID \
+    --namespace "/actor-state/anonymous" \
+    --region ap-northeast-1
+```
+
+### Actor状態の検索
+
+```bash
+# 直近の活動状態を検索
+aws bedrock-agentcore search-memory \
+    --memory-id $MEMORY_ID \
+    --namespace "/actor-state/anonymous" \
+    --query-text "直近の活動状態" \
+    --region ap-northeast-1
+```
 
 ## クイックリファレンス
 
@@ -317,9 +387,11 @@ AgentCore APPLICATION_LOGSの `response_payload` フィールドは現在CloudWa
 |-----|---------|
 | エージェント直接呼び出し | `aws bedrock-agentcore-runtime invoke-agent-runtime ...` |
 | S3トリガーテスト | `aws s3 cp test.txt s3://agentcore-trigger-bucket/` |
+| S3出力確認 | `aws s3 ls s3://agentcore-trigger-bucket/outputs/` |
 | Runtime状態確認 | `make get-runtime-info` |
 | バージョン確認 | `make list-versions` |
 | APPLICATION_LOGS確認 | CloudWatch Logs `/aws/vendedlogs/bedrock-agentcore/runtime/agentcore_runtime/APPLICATION_LOGS` |
 | Lambdaログ確認 | CloudWatch Logs `/aws/lambda/agentcore-invoker` |
 | メモリレコード確認 | `aws bedrock-agentcore list-memory-records --memory-id $MEMORY_ID` |
+| Actor状態確認 | `aws bedrock-agentcore list-memory-records --namespace "/actor-state/{actorId}" ...` |
 | AWS再認証 | `aws login` |
