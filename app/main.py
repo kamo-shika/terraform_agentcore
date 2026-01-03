@@ -90,31 +90,3 @@ def handler(event, context):
                 "error": str(e)
             }
         }
-
-if __name__ == "__main__":
-    # Local testing with interactive mode
-    print("=== AgentCore Local Testing Mode ===")
-    print("Memory機能が有効な場合、同じSESSION_IDで会話履歴が保持されます")
-    print("終了するには 'quit' または 'exit' と入力してください\n")
-
-    while True:
-        try:
-            user_input = input("You: ")
-            if user_input.lower() in ['quit', 'exit', 'q']:
-                print("終了します...")
-                break
-
-            if not user_input.strip():
-                continue
-
-            result = handler({"input": {"text": user_input}}, {})
-            response = result.get('body', {}).get('response', 'No response')
-            print(f"\nAgent: {response}\n")
-
-        except KeyboardInterrupt:
-            print("\n\n終了します...")
-            break
-        except Exception as e:
-            print(f"\nエラー: {e}\n")
-            import traceback
-            traceback.print_exc()
