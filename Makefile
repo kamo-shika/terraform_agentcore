@@ -96,8 +96,15 @@ validate-tf:
 login:
 	aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_URL)
 
+# Dockerイメージをビルド（Memory IDを環境変数として注入）
 build:
-	docker build -t $(REPO_NAME) .
+	@if [ -n "$(MEMORY_ID)" ]; then \
+		echo "Building with AGENTCORE_MEMORY_ID=$(MEMORY_ID)"; \
+		docker build --build-arg AGENTCORE_MEMORY_ID=$(MEMORY_ID) -t $(REPO_NAME) .; \
+	else \
+		echo "Warning: MEMORY_ID not found. Building without LTM support."; \
+		docker build -t $(REPO_NAME) .; \
+	fi
 
 push: login build
 	docker tag $(REPO_NAME):latest $(IMAGE_URI)
@@ -118,6 +125,9 @@ deploy-init:
 # --- AgentCore Endpoint Management ---
 # AgentCore Runtime IDを取得
 RUNTIME_ID = $(shell cd $(TF_DIR) && terraform output -raw runtime_id 2>/dev/null)
+
+# AgentCore Memory IDを取得（Dockerビルド時に注入）
+MEMORY_ID = $(shell cd $(TF_DIR) && terraform output -raw memory_id 2>/dev/null)
 
 # DEFAULTエンドポイントを最新バージョンに更新
 update-endpoint:

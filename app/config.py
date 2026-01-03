@@ -29,6 +29,22 @@ DEFAULT_ACTOR_ID = os.getenv("ACTOR_ID", "local-user")
 # デフォルト入力テキスト: エージェントへのデフォルト入力
 DEFAULT_INPUT_TEXT = os.getenv("DEFAULT_INPUT_TEXT", "Hello")
 
+# ========================================
+# 長期メモリ（LTM）設定
+# ========================================
+
+# LTM有効フラグ: ファイル要約の蓄積機能を有効にするかどうか
+LTM_ENABLED = os.getenv("LTM_ENABLED", "true").lower() == "true"
+
+# LTM取得件数: 過去の要約を取得する最大件数
+LTM_SUMMARY_TOP_K = int(os.getenv("LTM_SUMMARY_TOP_K", "10"))
+
+# LTM関連度スコア閾値: 取得する要約の最低関連度スコア（0.0〜1.0）
+LTM_SUMMARY_SCORE = float(os.getenv("LTM_SUMMARY_SCORE", "0.3"))
+
+# LTM Namespace: ファイル要約を保存するNamespace（Terraformと一致させる）
+LTM_NAMESPACE = "/file-summaries/{actorId}"
+
 
 # ========================================
 # ロギング設定
