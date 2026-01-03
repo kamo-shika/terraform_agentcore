@@ -49,25 +49,19 @@ resource "aws_bedrockagentcore_memory" "main" {
 # ==============================================================================
 # ファイル要約を長期メモリとして蓄積するためのSemantic Memory Strategy
 # ユーザー（actorId）別にファイル要約を保存・取得する
+#
+# 注意: AgentCore Memoryの制限:
+# - 各タイプのストラテジーは1つのみ許可
+# - 各ストラテジーは1つのNamespaceのみ許可
+#
+# Actor状態（/actor-state/{actorId}）はストラテジー不要:
+# batch_create_memory_records APIで直接書き込み可能
 resource "aws_bedrockagentcore_memory_strategy" "file_summary" {
   name        = "FileSummaryExtractor"
   memory_id   = aws_bedrockagentcore_memory.main.id
   type        = "SEMANTIC"
   namespaces  = ["/file-summaries/{actorId}"]
   description = "S3ファイル要約を蓄積し、過去の要約を統合した出力を可能にするSemantic Memory Strategy"
-}
-
-# ==============================================================================
-# Bedrock AgentCore Memory Strategy - Semantic (Actor状態追跡)
-# ==============================================================================
-# Actorの活動状態を長期メモリとして蓄積するためのSemantic Memory Strategy
-# ファイル要約とは別に、Actorの直近の活動をまとめて保存する
-resource "aws_bedrockagentcore_memory_strategy" "actor_state" {
-  name        = "ActorStateTracker"
-  memory_id   = aws_bedrockagentcore_memory.main.id
-  type        = "SEMANTIC"
-  namespaces  = ["/actor-state/{actorId}"]
-  description = "Actorの活動状態を追跡し、直近の動きをまとめて保存するSemantic Memory Strategy"
 }
 
 # ==============================================================================
