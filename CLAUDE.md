@@ -186,6 +186,23 @@ make test                    # uv run pytest tests/ -v
 
 # カバレッジ付きでテストを実行
 make test-cov                # uv run pytest tests/ --cov=app --cov-report=term-missing
+
+# 特定のテストファイルを実行
+uv run pytest tests/test_main.py -v
+
+# 特定のテスト関数を実行
+uv run pytest tests/test_main.py::TestHandler::test_handler_with_valid_input -v
+```
+
+### テストディレクトリ構造
+```
+tests/
+├── __init__.py              # テストパッケージ
+├── conftest.py              # 共通フィクスチャとpytest設定
+├── test_main.py             # app/main.pyのテスト
+├── test_agent.py            # app/agent.pyのテスト
+└── fixtures/                # テストデータとヘルパー
+    └── __init__.py
 ```
 
 ### テスト方針
@@ -205,6 +222,65 @@ make test-cov                # uv run pytest tests/ --cov=app --cov-report=term-
 - 自分たちのコード内の関数をモック化する
 - boto3クライアントを安易にモック化する
 - テストの簡便さのためだけにモックを使用する
+
+### TDD（テスト駆動開発）ワークフロー
+
+このプロジェクトでは、`test-specialist`エージェントを使用したTDDを推奨しています。
+
+#### Red-Green-Refactorサイクル
+
+1. **Red（テストを先に書く）**
+   - `test-specialist`が要件からテストを先に実装
+   - テストを実行して失敗を確認
+
+2. **Green（最小限の実装でテストを通す）**
+   - `python-developer`がテストを通す最小限のコードを実装
+   - テストを実行して成功を確認
+
+3. **Refactor（リファクタリング）**
+   - `python-developer`がコードを改善
+   - テストが通ることを確認しながら改善
+
+4. **Integration（統合検証）**
+   - `integrator`がエンドツーエンドで動作確認
+
+#### 新機能追加時の流れ
+
+```bash
+# 1. test-specialistがテストを実装（Red）
+Task(subagent_type="test-specialist", prompt="XX機能のテストケースを実装")
+
+# 2. テスト実行して失敗を確認
+make test
+
+# 3. python-developerが実装（Green）
+Task(subagent_type="python-developer", prompt="XX機能を実装してテストを通す")
+
+# 4. テスト実行して成功を確認
+make test
+
+# 5. 必要に応じてリファクタリング（Refactor）
+Task(subagent_type="python-developer", prompt="XX機能をリファクタリング")
+
+# 6. カバレッジ確認
+make test-cov
+
+# 7. 統合テスト（Integration）
+Task(subagent_type="integrator", prompt="XX機能のエンドツーエンドテスト")
+```
+
+#### フィクスチャの活用
+
+`tests/conftest.py`に定義された共通フィクスチャを活用してください：
+
+| フィクスチャ | 用途 |
+|-------------|------|
+| `sample_event` | 標準的なAgentCoreイベント |
+| `sample_event_with_session` | セッション情報付きイベント |
+| `sample_s3_event` | S3ファイル処理用イベント |
+| `empty_event` / `invalid_event` | エラーハンドリングテスト用 |
+| `clean_env` | 環境変数をクリーンにする |
+| `set_memory_env` | Memory関連環境変数を設定 |
 
 ## サブエージェント
 
