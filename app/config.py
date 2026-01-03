@@ -45,6 +45,12 @@ LTM_SUMMARY_SCORE = float(os.getenv("LTM_SUMMARY_SCORE", "0.3"))
 # LTM Namespace: ファイル要約を保存するNamespace（Terraformと一致させる）
 LTM_NAMESPACE = "/file-summaries/{actorId}"
 
+# Actor状態Namespace: Actorの活動状態を保存するNamespace（Terraformと一致させる）
+ACTOR_STATE_NAMESPACE = "/actor-state/{actorId}"
+
+# Actor状態取得件数: 過去のActor状態を取得する最大件数
+ACTOR_STATE_TOP_K = int(os.getenv("ACTOR_STATE_TOP_K", "5"))
+
 
 # ========================================
 # ロギング設定

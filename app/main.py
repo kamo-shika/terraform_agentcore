@@ -1,9 +1,14 @@
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from strands import Agent
 from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
 from .agent import create_agent
-from .memory import create_memory
+from .memory import (
+    create_memory,
+    retrieve_past_summaries,
+    retrieve_actor_state,
+    save_actor_state,
+)
 from .prompts import load_prompt
 from .config import get_memory_id, get_session_id, get_actor_id, get_input_text, REGION
 
@@ -113,6 +118,110 @@ def run_agent(
     return response
 
 
+def fetch_memory_context(
+    memory_id: str,
+    actor_id: str,
+    query: str,
+) -> Dict[str, Any]:
+    """
+    メモリから過去の要約とActor状態を取得する。
+
+    Args:
+        memory_id: メモリID
+        actor_id: アクターID
+        query: 検索クエリ（ファイル内容やファイル名など）
+
+    Returns:
+        以下のキーを含む辞書:
+        - past_summaries: 過去のファイル要約リスト
+        - actor_state: Actor状態リスト
+    """
+    context = {
+        "past_summaries": [],
+        "actor_state": [],
+    }
+
+    try:
+        # 過去のファイル要約を取得
+        past_summaries = retrieve_past_summaries(memory_id, actor_id, query)
+        context["past_summaries"] = past_summaries
+        logger.info(f"Retrieved {len(past_summaries)} past summaries")
+    except Exception as e:
+        logger.warning(f"Failed to retrieve past summaries: {e}")
+
+    try:
+        # Actor状態を取得
+        actor_state = retrieve_actor_state(memory_id, actor_id)
+        context["actor_state"] = actor_state
+        logger.info(f"Retrieved {len(actor_state)} actor state records")
+    except Exception as e:
+        logger.warning(f"Failed to retrieve actor state: {e}")
+
+    return context
+
+
+def format_memory_context(context: Dict[str, Any]) -> str:
+    """
+    メモリコンテキストをプロンプト用の文字列にフォーマットする。
+
+    Args:
+        context: fetch_memory_contextの戻り値
+
+    Returns:
+        プロンプトに追加するためのフォーマット済み文字列
+    """
+    lines = []
+
+    # 過去のファイル要約
+    past_summaries = context.get("past_summaries", [])
+    if past_summaries:
+        lines.append("## 過去のファイル要約")
+        for i, summary in enumerate(past_summaries, 1):
+            content = summary.get("content", "")
+            score = summary.get("relevanceScore", 0.0)
+            lines.append(f"### 要約 {i} (関連度: {score:.2f})")
+            lines.append(content)
+            lines.append("")
+
+    # Actor状態
+    actor_state = context.get("actor_state", [])
+    if actor_state:
+        lines.append("## Actorの直近の活動状態")
+        for i, state in enumerate(actor_state, 1):
+            content = state.get("content", "")
+            lines.append(f"### 状態 {i}")
+            lines.append(content)
+            lines.append("")
+
+    return "\n".join(lines) if lines else ""
+
+
+def generate_actor_state_summary(
+    file_key: str,
+    response_text: str,
+    past_summaries_count: int,
+) -> str:
+    """
+    エージェントの応答からActor状態サマリーを生成する。
+
+    Args:
+        file_key: 処理したファイルのS3キー
+        response_text: エージェントの応答テキスト
+        past_summaries_count: 参照した過去の要約数
+
+    Returns:
+        Actor状態として保存するサマリーテキスト
+    """
+    # 応答テキストが長すぎる場合は最初の500文字に制限
+    summary_excerpt = response_text[:500] if len(response_text) > 500 else response_text
+
+    return (
+        f"ファイル処理: {file_key}\n"
+        f"参照した過去の要約数: {past_summaries_count}\n"
+        f"処理結果の概要:\n{summary_excerpt}"
+    )
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Bedrock AgentCore Runtimeのエントリーポイント。
@@ -151,15 +260,33 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         # S3ファイル処理モード
         system_prompt = None
+        memory_context = None
+        file_key = None
         if s3_info:
             bucket = s3_info.get("bucket")
             key = s3_info.get("key")
+            file_key = key
             logger.info(f"S3 file processing request: s3://{bucket}/{key}")
+
+            # メモリコンテキストを取得（過去の要約とActor状態）
+            if memory_id:
+                memory_context = fetch_memory_context(memory_id, actor_id, key)
+                memory_context_str = format_memory_context(memory_context)
+                if memory_context_str:
+                    logger.info("Memory context retrieved and formatted")
+            else:
+                memory_context_str = ""
 
             # 要約プロンプトの読み込み
             try:
-                system_prompt = load_prompt("summarize", bucket=bucket, key=key, user_id=actor_id)
-                logger.info("Loaded summarization prompt")
+                system_prompt = load_prompt(
+                    "summarize",
+                    bucket=bucket,
+                    key=key,
+                    user_id=actor_id,
+                    memory_context=memory_context_str,
+                )
+                logger.info("Loaded summarization prompt with memory context")
             except FileNotFoundError:
                 logger.warning("summarize.txt prompt not found, using default")
             except Exception as e:
@@ -173,6 +300,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
         # レスポンスを文字列に変換（JSON serializable化）
         response_text = str(response) if response else ""
+
+        # Actor状態を保存（S3ファイル処理の場合のみ）
+        if memory_id and s3_info and file_key and response_text:
+            try:
+                past_summaries_count = len(memory_context.get("past_summaries", [])) if memory_context else 0
+                actor_state_summary = generate_actor_state_summary(
+                    file_key, response_text, past_summaries_count
+                )
+                save_actor_state(memory_id, actor_id, actor_state_summary)
+                logger.info("Actor state saved successfully")
+            except Exception as e:
+                logger.warning(f"Failed to save actor state: {e}")
 
         return {"statusCode": 200, "body": {"response": response_text}}
     except Exception as e:

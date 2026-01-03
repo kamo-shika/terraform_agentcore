@@ -58,6 +58,19 @@ resource "aws_bedrockagentcore_memory_strategy" "file_summary" {
 }
 
 # ==============================================================================
+# Bedrock AgentCore Memory Strategy - UserPreference (Actor状態追跡)
+# ==============================================================================
+# Actorの活動状態・傾向を長期メモリとして蓄積するためのUserPreference Memory Strategy
+# ファイル処理の傾向やActorの活動パターンを保存・取得する
+resource "aws_bedrockagentcore_memory_strategy" "actor_state" {
+  name        = "ActorStateTracker"
+  memory_id   = aws_bedrockagentcore_memory.main.id
+  type        = "USER_PREFERENCE"
+  namespaces  = ["/actor-state/{actorId}"]
+  description = "Actorの活動状態と傾向を追跡し、直近の動きをまとめて保存するUserPreference Memory Strategy"
+}
+
+# ==============================================================================
 # Bedrock AgentCore Runtime Endpoint - PROD
 # ==============================================================================
 # 本番環境用のカスタムエンドポイント
