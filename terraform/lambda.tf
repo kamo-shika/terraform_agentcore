@@ -4,10 +4,10 @@ resource "aws_lambda_function" "invoker" {
   function_name = "${var.project_name}-invoker"
   role          = aws_iam_role.lambda_role.arn
   handler       = "invoker.lambda_handler"
-  runtime       = "python3.12"
+  runtime       = var.lambda_runtime
   filename      = "${path.module}/../lambda_function_payload.zip"
-  timeout       = 300
-  memory_size   = 512
+  timeout       = var.lambda_timeout_seconds
+  memory_size   = var.lambda_memory_mb
 
   source_code_hash = filebase64sha256("${path.module}/../lambda_function_payload.zip")
 
@@ -19,7 +19,7 @@ resource "aws_lambda_function" "invoker" {
   }
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = var.project_name
     Purpose     = "AgentCore invoker"
   }
@@ -50,7 +50,7 @@ resource "aws_iam_role" "lambda_role" {
   })
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = var.project_name
   }
 }
@@ -103,10 +103,10 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attach" {
 # CloudWatch Log Group for Lambda
 resource "aws_cloudwatch_log_group" "lambda_logs" {
   name              = "/aws/lambda/${var.project_name}-invoker"
-  retention_in_days = 7
+  retention_in_days = var.log_retention_days
 
   tags = {
-    Environment = "dev"
+    Environment = var.environment
     Project     = var.project_name
   }
 }
