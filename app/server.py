@@ -7,8 +7,10 @@ FastAPI HTTPサーバー - Bedrock AgentCore Runtime用。
 """
 
 import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+
 from .main import handler
 
 # Configure logging
@@ -16,11 +18,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # FastAPIアプリケーションの初期化
-app = FastAPI(
-    title="AgentCore Runtime Server",
-    description="Bedrock AgentCore Runtime用HTTPサーバー",
-    version="1.0.0"
-)
+app = FastAPI(title="AgentCore Runtime Server", description="Bedrock AgentCore Runtime用HTTPサーバー", version="1.0.0")
 
 
 @app.get("/ping")
@@ -75,32 +73,25 @@ async def invocations(request: Request):
         # contextパラメータは空の辞書（AgentCoreでは未使用）
         result = handler(event, {})
 
-        logger.info(f"Invocation completed successfully")
+        logger.info("Invocation completed successfully")
 
         # AgentCore Runtimeが期待する形式にレスポンスを変換
         # handler戻り値: {"statusCode": 200, "body": {"response": "..."}}
         # AgentCore期待値: {"response": "...", "status": "success"}
         if result.get("statusCode") == 200:
             response_body = result.get("body", {})
-            agentcore_response = {
-                "response": response_body.get("response", ""),
-                "status": "success"
-            }
+            agentcore_response = {"response": response_body.get("response", ""), "status": "success"}
             return JSONResponse(content=agentcore_response)
         else:
             # エラーの場合
             error_body = result.get("body", {})
             return JSONResponse(
-                status_code=result.get("statusCode", 500),
-                content={"error": error_body.get("error", "Unknown error")}
+                status_code=result.get("statusCode", 500), content={"error": error_body.get("error", "Unknown error")}
             )
 
     except Exception as e:
         logger.error(f"Error processing invocation: {e}", exc_info=True)
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 @app.get("/")
@@ -114,14 +105,12 @@ async def root():
     return {
         "service": "AgentCore Runtime Server",
         "status": "running",
-        "endpoints": {
-            "health": "/ping",
-            "invocations": "/invocations (POST)"
-        }
+        "endpoints": {"health": "/ping", "invocations": "/invocations (POST)"},
     }
 
 
 if __name__ == "__main__":
     # ローカルでの開発/テスト用
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8080)
