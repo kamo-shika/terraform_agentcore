@@ -1,16 +1,17 @@
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
+from strands import Agent
+from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
 from .agent import create_agent
 from .memory import create_memory
 from .prompts import load_prompt
 from .config import get_memory_id, get_session_id, get_actor_id, get_input_text, REGION
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# ロギング設定はconfig.pyで一元管理されている
 logger = logging.getLogger(__name__)
 
 
-def parse_event(event: dict) -> dict:
+def parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
     """
     イベントから必要な情報を抽出する。
 
@@ -18,11 +19,11 @@ def parse_event(event: dict) -> dict:
         event: AgentCoreから渡されるイベント辞書
 
     Returns:
-        dict: 以下のキーを含む辞書
-            - session_id: セッションID
-            - actor_id: アクターID
-            - user_input: ユーザー入力テキスト
-            - s3_info: S3情報（存在する場合）またはNone
+        以下のキーを含む辞書:
+            - session_id (str): セッションID
+            - actor_id (str): アクターID
+            - user_input (str): ユーザー入力テキスト
+            - s3_info (Optional[Dict[str, str]]): S3情報（存在する場合）またはNone
     """
     return {
         "session_id": get_session_id(event),
@@ -32,7 +33,7 @@ def parse_event(event: dict) -> dict:
     }
 
 
-def initialize_memory(memory_id: str, session_id: str, actor_id: str) -> Optional[object]:
+def initialize_memory(memory_id: str, session_id: str, actor_id: str) -> Optional[AgentCoreMemorySessionManager]:
     """
     メモリを初期化する。
 
@@ -42,7 +43,10 @@ def initialize_memory(memory_id: str, session_id: str, actor_id: str) -> Optiona
         actor_id: アクターID
 
     Returns:
-        SessionManagerオブジェクト、またはNone（メモリIDがない場合やエラー時）
+        AgentCoreMemorySessionManagerオブジェクト、またはNone（メモリIDがない場合やエラー時）
+
+    Raises:
+        Exception: メモリ初期化時の例外（catchされてNoneが返される）
     """
     if not memory_id:
         return None
@@ -65,7 +69,7 @@ def build_s3_instruction(bucket: str, key: str) -> str:
         key: S3オブジェクトキー
 
     Returns:
-        S3ファイル処理用の命令文字列
+        S3ファイル処理用の命令文字列（エージェントへの指示を含む）
     """
     return (
         f"S3バケット '{bucket}' のファイル '{key}' を読み取り、内容を要約してください。\n"
@@ -77,7 +81,11 @@ def build_s3_instruction(bucket: str, key: str) -> str:
     )
 
 
-def run_agent(user_input: str, session_manager=None, system_prompt=None) -> str:
+def run_agent(
+    user_input: str,
+    session_manager: Optional[AgentCoreMemorySessionManager] = None,
+    system_prompt: Optional[str] = None
+) -> Any:
     """
     エージェントを実行する。
 
@@ -87,14 +95,14 @@ def run_agent(user_input: str, session_manager=None, system_prompt=None) -> str:
         system_prompt: システムプロンプト（オプション）
 
     Returns:
-        エージェントの応答文字列（Noneの場合は空文字列ではなくNoneを返す）
+        エージェントの応答（Strandsエージェントからの戻り値）
     """
     agent = create_agent(session_manager=session_manager, system_prompt=system_prompt)
     response = agent(user_input)
     return response
 
 
-def handler(event, context):
+def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Bedrock AgentCore Runtimeのエントリーポイント。
 
@@ -105,7 +113,12 @@ def handler(event, context):
         context: 実行コンテキスト
 
     Returns:
-        dict: ステータスコードとレスポンスボディを含む辞書
+        以下の形式の辞書:
+            - statusCode (int): HTTPステータスコード（200または500）
+            - body (Dict[str, str]): レスポンスボディ（responseまたはerrorキーを含む）
+
+    Raises:
+        Exception: エージェント実行時の例外（catchされて500エラーとして返される）
     """
     logger.info("Received event: %s", event)
 
