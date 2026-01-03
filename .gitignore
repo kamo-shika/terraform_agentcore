@@ -14,3 +14,4 @@ lambda_function_payload.zip
 .terraform/
 *.tfstate
 *.tfstate.backup
+.coverage
