@@ -4,7 +4,7 @@ app/agent.pyのテスト。
 create_agent関数の動作を検証する。
 Agentオブジェクトの作成自体は課金が発生しないためモックなしでテスト可能。
 """
-import pytest
+
 from strands import Agent
 
 from app.agent import create_agent
@@ -102,10 +102,7 @@ class TestCreateAgent:
         custom_prompt = "カスタムプロンプト"
         mock_session_manager = MagicMock()
 
-        agent = create_agent(
-            session_manager=mock_session_manager,
-            system_prompt=custom_prompt
-        )
+        agent = create_agent(session_manager=mock_session_manager, system_prompt=custom_prompt)
 
         assert agent.system_prompt == custom_prompt
         assert agent.name == "S3FileProcessingAgent"

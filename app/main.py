@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+
 from .agent import create_agent
 from .memory import create_memory
 from .prompts import load_prompt
@@ -7,6 +8,7 @@ from .prompts import load_prompt
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 def handler(event, context):
     """
@@ -45,12 +47,7 @@ def handler(event, context):
 
             # Load the summarization prompt with S3 context
             try:
-                system_prompt = load_prompt(
-                    "summarize",
-                    bucket=bucket,
-                    key=key,
-                    user_id=actor_id
-                )
+                system_prompt = load_prompt("summarize", bucket=bucket, key=key, user_id=actor_id)
                 logger.info("Loaded summarization prompt")
             except FileNotFoundError:
                 logger.warning("summarize.txt prompt not found, using default")
@@ -76,17 +73,7 @@ def handler(event, context):
         # AgentResultオブジェクトを文字列に変換（JSON serializable化）
         response_text = str(response) if response else ""
 
-        return {
-            "statusCode": 200,
-            "body": {
-                "response": response_text
-            }
-        }
+        return {"statusCode": 200, "body": {"response": response_text}}
     except Exception as e:
         logger.error("Error running agent: %s", e)
-        return {
-            "statusCode": 500,
-            "body": {
-                "error": str(e)
-            }
-        }
+        return {"statusCode": 500, "body": {"error": str(e)}}
