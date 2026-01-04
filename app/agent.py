@@ -1,16 +1,16 @@
 import logging
-from typing import Optional
+
+from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
 from strands import Agent
 from strands_tools import use_aws
-from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
+
 from .config import MODEL_ID
 
 logger = logging.getLogger(__name__)
 
 
 def create_agent(
-    session_manager: Optional[AgentCoreMemorySessionManager] = None,
-    system_prompt: Optional[str] = None
+    session_manager: AgentCoreMemorySessionManager | None = None, system_prompt: str | None = None
 ) -> Agent:
     """
     S3ファイル読み取り機能を持つエージェントを作成する。

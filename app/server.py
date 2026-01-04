@@ -8,7 +8,8 @@ FastAPI HTTPサーバー - Bedrock AgentCore Runtime用。
 
 import logging
 import os
-from typing import Dict, Any
+from typing import Any
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -22,7 +23,7 @@ app = FastAPI(title="AgentCore Runtime Server", description="Bedrock AgentCore R
 
 
 @app.get("/ping")
-async def ping() -> Dict[str, str]:
+async def ping() -> dict[str, str]:
     """
     ヘルスチェックエンドポイント。
 
@@ -66,7 +67,7 @@ async def invocations(request: Request) -> JSONResponse:
     """
     try:
         # リクエストボディをJSONとして取得
-        event: Dict[str, Any] = await request.json()
+        event: dict[str, Any] = await request.json()
         logger.info(f"Invocation request received: {event}")
 
         # main.pyのhandler関数を呼び出し
@@ -96,7 +97,7 @@ async def invocations(request: Request) -> JSONResponse:
 
 
 @app.get("/")
-async def root() -> Dict[str, Any]:
+async def root() -> dict[str, Any]:
     """
     ルートエンドポイント。
 
@@ -111,14 +112,14 @@ async def root() -> Dict[str, Any]:
 
 
 @app.get("/debug")
-async def debug() -> Dict[str, Any]:
+async def debug() -> dict[str, Any]:
     """
     デバッグ用エンドポイント。環境変数とメモリ設定を返す。
 
     Returns:
         環境変数とメモリ設定の情報を含む辞書
     """
-    from .config import get_memory_id, LTM_ENABLED, LTM_NAMESPACE
+    from .config import LTM_ENABLED, LTM_NAMESPACE, get_memory_id
 
     memory_id = get_memory_id()
     return {

@@ -4,8 +4,7 @@ app/config.pyのテスト。
 このテストは、アプリケーション全体で使用される設定値の一元管理をテストする。
 設定値は環境変数から取得でき、デフォルト値も提供される。
 """
-import os
-import pytest
+
 
 
 class TestDefaultValues:
@@ -90,7 +89,9 @@ class TestEnvironmentVariableOverrides:
 
         # モジュールを再インポートして環境変数を反映
         import importlib
+
         import app.config
+
         importlib.reload(app.config)
 
         assert app.config.MODEL_ID == custom_model
@@ -107,7 +108,9 @@ class TestEnvironmentVariableOverrides:
 
         # モジュールを再インポートして環境変数を反映
         import importlib
+
         import app.config
+
         importlib.reload(app.config)
 
         assert app.config.REGION == custom_region
@@ -124,7 +127,9 @@ class TestEnvironmentVariableOverrides:
 
         # モジュールを再インポートして環境変数を反映
         import importlib
+
         import app.config
+
         importlib.reload(app.config)
 
         assert app.config.DEFAULT_SESSION_ID == custom_session
@@ -141,7 +146,9 @@ class TestEnvironmentVariableOverrides:
 
         # モジュールを再インポートして環境変数を反映
         import importlib
+
         import app.config
+
         importlib.reload(app.config)
 
         assert app.config.DEFAULT_ACTOR_ID == custom_actor
@@ -158,7 +165,9 @@ class TestEnvironmentVariableOverrides:
 
         # モジュールを再インポートして環境変数を反映
         import importlib
+
         import app.config
+
         importlib.reload(app.config)
 
         assert app.config.DEFAULT_INPUT_TEXT == custom_text
@@ -203,11 +212,11 @@ class TestConfigStructure:
         設定値はすべて文字列として定義されているべき。
         """
         from app.config import (
-            MODEL_ID,
-            REGION,
-            DEFAULT_SESSION_ID,
             DEFAULT_ACTOR_ID,
             DEFAULT_INPUT_TEXT,
+            DEFAULT_SESSION_ID,
+            MODEL_ID,
+            REGION,
         )
 
         assert isinstance(MODEL_ID, str), "MODEL_ID should be a string"
@@ -223,11 +232,11 @@ class TestConfigStructure:
         すべてのデフォルト値は意味のある値を持つべき。
         """
         from app.config import (
-            MODEL_ID,
-            REGION,
-            DEFAULT_SESSION_ID,
             DEFAULT_ACTOR_ID,
             DEFAULT_INPUT_TEXT,
+            DEFAULT_SESSION_ID,
+            MODEL_ID,
+            REGION,
         )
 
         assert MODEL_ID != "", "MODEL_ID should not be empty"
@@ -334,11 +343,7 @@ class TestConfigFunctions:
         """
         from app.config import get_input_text
 
-        event = {
-            "input": {
-                "text": "イベントからのテキスト"
-            }
-        }
+        event = {"input": {"text": "イベントからのテキスト"}}
         input_text = get_input_text(event)
 
         assert input_text == "イベントからのテキスト"
@@ -351,9 +356,7 @@ class TestConfigFunctions:
         """
         from app.config import get_input_text
 
-        event = {
-            "input": {}
-        }
+        event = {"input": {}}
         input_text = get_input_text(event)
 
         assert input_text == "Hello"

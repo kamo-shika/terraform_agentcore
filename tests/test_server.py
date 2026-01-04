@@ -3,8 +3,10 @@ app/server.pyのテスト。
 
 FastAPIエンドポイントの動作とエラーハンドリングを検証する。
 """
+
+from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 
@@ -17,6 +19,7 @@ def test_client():
         TestClient: FastAPIアプリケーションのテストクライアント
     """
     from app.server import app
+
     return TestClient(app)
 
 
@@ -68,18 +71,11 @@ class TestInvocationsEndpoint:
         """
         with patch("app.server.handler") as mock_handler:
             # handlerのモック設定
-            mock_handler.return_value = {
-                "statusCode": 200,
-                "body": {"response": "テスト応答"}
-            }
+            mock_handler.return_value = {"statusCode": 200, "body": {"response": "テスト応答"}}
 
             response = test_client.post(
                 "/invocations",
-                json={
-                    "input": {"text": "こんにちは"},
-                    "sessionId": "test-session",
-                    "actorId": "test-actor"
-                }
+                json={"input": {"text": "こんにちは"}, "sessionId": "test-session", "actorId": "test-actor"},
             )
 
             assert response.status_code == 200
@@ -98,17 +94,9 @@ class TestInvocationsEndpoint:
         """
         with patch("app.server.handler") as mock_handler:
             # handlerがエラーを返す
-            mock_handler.return_value = {
-                "statusCode": 500,
-                "body": {"error": "テストエラー"}
-            }
+            mock_handler.return_value = {"statusCode": 500, "body": {"error": "テストエラー"}}
 
-            response = test_client.post(
-                "/invocations",
-                json={
-                    "input": {"text": "エラーテスト"}
-                }
-            )
+            response = test_client.post("/invocations", json={"input": {"text": "エラーテスト"}})
 
             assert response.status_code == 500
             data = response.json()
@@ -126,9 +114,7 @@ class TestInvocationsEndpoint:
             test_client: FastAPIテストクライアント
         """
         response = test_client.post(
-            "/invocations",
-            data="invalid json string",
-            headers={"Content-Type": "application/json"}
+            "/invocations", data="invalid json string", headers={"Content-Type": "application/json"}
         )
 
         # 現在の実装では500を返す（改善の余地あり）
@@ -146,20 +132,13 @@ class TestInvocationsEndpoint:
         Args:
             test_client: FastAPIテストクライアント
         """
-        import json
 
         with patch("app.server.handler") as mock_handler:
             # handlerは正常に動作するが、レスポンスがJSON非互換
-            mock_handler.return_value = {
-                "statusCode": 200,
-                "body": {"response": "応答"}
-            }
+            mock_handler.return_value = {"statusCode": 200, "body": {"response": "応答"}}
 
             # 正常なJSONを送信
-            response = test_client.post(
-                "/invocations",
-                json={"input": {"text": "テスト"}}
-            )
+            response = test_client.post("/invocations", json={"input": {"text": "テスト"}})
 
             # 正常に処理される
             assert response.status_code == 200
@@ -175,10 +154,7 @@ class TestInvocationsEndpoint:
             # handlerが例外を発生させる
             mock_handler.side_effect = Exception("予期しないエラー")
 
-            response = test_client.post(
-                "/invocations",
-                json={"input": {"text": "例外テスト"}}
-            )
+            response = test_client.post("/invocations", json={"input": {"text": "例外テスト"}})
 
             assert response.status_code == 500
             data = response.json()
@@ -194,15 +170,9 @@ class TestInvocationsEndpoint:
         """
         with patch("app.server.handler") as mock_handler:
             # handlerがデフォルト値で動作
-            mock_handler.return_value = {
-                "statusCode": 200,
-                "body": {"response": "デフォルト応答"}
-            }
+            mock_handler.return_value = {"statusCode": 200, "body": {"response": "デフォルト応答"}}
 
-            response = test_client.post(
-                "/invocations",
-                json={}
-            )
+            response = test_client.post("/invocations", json={})
 
             assert response.status_code == 200
             data = response.json()
@@ -218,15 +188,9 @@ class TestInvocationsEndpoint:
             test_client: FastAPIテストクライアント
         """
         with patch("app.server.handler") as mock_handler:
-            mock_handler.return_value = {
-                "statusCode": 200,
-                "body": {"response": "応答テキスト"}
-            }
+            mock_handler.return_value = {"statusCode": 200, "body": {"response": "応答テキスト"}}
 
-            response = test_client.post(
-                "/invocations",
-                json={"input": {"text": "テスト"}}
-            )
+            response = test_client.post("/invocations", json={"input": {"text": "テスト"}})
 
             assert response.status_code == 200
             data = response.json()

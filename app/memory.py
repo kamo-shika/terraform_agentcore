@@ -1,20 +1,21 @@
 import logging
 import uuid
-from datetime import datetime, timezone
-from typing import Optional, Dict, Any, List
+from datetime import UTC, datetime
+from typing import Any
 
 import boto3
-from botocore.exceptions import ClientError
 from bedrock_agentcore.memory.integrations.strands.config import AgentCoreMemoryConfig
 from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
+from botocore.exceptions import ClientError
+
 from .config import (
-    REGION,
-    LTM_ENABLED,
-    LTM_SUMMARY_TOP_K,
-    LTM_SUMMARY_SCORE,
-    LTM_NAMESPACE,
     ACTOR_STATE_NAMESPACE,
     ACTOR_STATE_TOP_K,
+    LTM_ENABLED,
+    LTM_NAMESPACE,
+    LTM_SUMMARY_SCORE,
+    LTM_SUMMARY_TOP_K,
+    REGION,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ def _get_agentcore_client():
     return _agentcore_client
 
 
-def create_retrieval_config() -> Optional[Dict[str, Any]]:
+def create_retrieval_config() -> dict[str, Any] | None:
     """
     LTM用のRetrievalConfigを作成する。
 
@@ -88,9 +89,7 @@ def create_memory(mem_id: str, session_id: str, actor_id: str) -> AgentCoreMemor
         retrieval_config=retrieval_config,
     )
 
-    session_manager = AgentCoreMemorySessionManager(
-        agentcore_memory_config=agentcore_memory_config, region_name=REGION
-    )
+    session_manager = AgentCoreMemorySessionManager(agentcore_memory_config=agentcore_memory_config, region_name=REGION)
     return session_manager
 
 
@@ -113,7 +112,7 @@ def retrieve_past_summaries(
     actor_id: str,
     query: str,
     top_k: int = LTM_SUMMARY_TOP_K,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     過去のファイル要約をセマンティック検索で取得する。
 
@@ -174,7 +173,7 @@ def retrieve_actor_state(
     actor_id: str,
     query: str = "直近の活動状態",
     top_k: int = ACTOR_STATE_TOP_K,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Actorの活動状態をセマンティック検索で取得する。
 
@@ -234,7 +233,7 @@ def save_actor_state(
     memory_id: str,
     actor_id: str,
     state_text: str,
-) -> Optional[str]:
+) -> str | None:
     """
     Actorの活動状態をメモリに保存する。
 
@@ -265,7 +264,7 @@ def save_actor_state(
 
     # ユニークなレコードIDを生成
     record_id = f"actor-state-{actor_id}-{uuid.uuid4().hex[:8]}"
-    timestamp = datetime.now(timezone.utc).isoformat()
+    timestamp = datetime.now(UTC).isoformat()
 
     try:
         response = client.batch_create_memory_records(

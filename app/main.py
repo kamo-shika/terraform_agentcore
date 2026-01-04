@@ -1,16 +1,16 @@
 import logging
-from typing import Any, Dict, List, Optional
-from strands import Agent
+from typing import Any
+
 from bedrock_agentcore.memory.integrations.strands.session_manager import AgentCoreMemorySessionManager
+
 from .agent import create_agent
+from .config import REGION, get_actor_id, get_input_text, get_memory_id, get_session_id
 from .memory import (
     create_memory,
-    retrieve_past_summaries,
     retrieve_actor_state,
-    save_actor_state,
+    retrieve_past_summaries,
 )
-from .prompts import load_prompt
-from .config import get_memory_id, get_session_id, get_actor_id, get_input_text, REGION
+from .workflow import run_workflow
 
 # ロギング設定はconfig.pyで一元管理されている
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 APP_VERSION = "1.1.0"
 
 
-def parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
+def parse_event(event: dict[str, Any]) -> dict[str, Any]:
     """
     イベントから必要な情報を抽出する。
 
@@ -37,11 +37,11 @@ def parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
         "session_id": get_session_id(event),
         "actor_id": get_actor_id(event),
         "user_input": get_input_text(event),
-        "s3_info": event.get("s3_info")
+        "s3_info": event.get("s3_info"),
     }
 
 
-def initialize_memory(memory_id: str, session_id: str, actor_id: str) -> Optional[AgentCoreMemorySessionManager]:
+def initialize_memory(memory_id: str, session_id: str, actor_id: str) -> AgentCoreMemorySessionManager | None:
     """
     メモリを初期化する。
 
@@ -99,8 +99,8 @@ def build_s3_instruction(bucket: str, key: str) -> str:
 
 def run_agent(
     user_input: str,
-    session_manager: Optional[AgentCoreMemorySessionManager] = None,
-    system_prompt: Optional[str] = None
+    session_manager: AgentCoreMemorySessionManager | None = None,
+    system_prompt: str | None = None,
 ) -> Any:
     """
     エージェントを実行する。
@@ -122,7 +122,7 @@ def fetch_memory_context(
     memory_id: str,
     actor_id: str,
     query: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     メモリから過去の要約とActor状態を取得する。
 
@@ -160,7 +160,7 @@ def fetch_memory_context(
     return context
 
 
-def format_memory_context(context: Dict[str, Any]) -> str:
+def format_memory_context(context: dict[str, Any]) -> str:
     """
     メモリコンテキストをプロンプト用の文字列にフォーマットする。
 
@@ -215,14 +215,10 @@ def generate_actor_state_summary(
     # 応答テキストが長すぎる場合は最初の500文字に制限
     summary_excerpt = response_text[:500] if len(response_text) > 500 else response_text
 
-    return (
-        f"ファイル処理: {file_key}\n"
-        f"参照した過去の要約数: {past_summaries_count}\n"
-        f"処理結果の概要:\n{summary_excerpt}"
-    )
+    return f"ファイル処理: {file_key}\n参照した過去の要約数: {past_summaries_count}\n処理結果の概要:\n{summary_excerpt}"
 
 
-def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
     """
     Bedrock AgentCore Runtimeのエントリーポイント。
 
@@ -258,60 +254,28 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         else:
             logger.info("Memory disabled (no AGENTCORE_MEMORY_ID)")
 
-        # S3ファイル処理モード
-        system_prompt = None
-        memory_context = None
-        file_key = None
+        # S3ファイル処理モード - workflowを使用
         if s3_info:
             bucket = s3_info.get("bucket")
             key = s3_info.get("key")
-            file_key = key
-            logger.info(f"S3 file processing request: s3://{bucket}/{key}")
+            logger.info(f"S3 file processing request (workflow mode): s3://{bucket}/{key}")
 
-            # メモリコンテキストを取得（過去の要約とActor状態）
-            if memory_id:
-                memory_context = fetch_memory_context(memory_id, actor_id, key)
-                memory_context_str = format_memory_context(memory_context)
-                if memory_context_str:
-                    logger.info("Memory context retrieved and formatted")
-            else:
-                memory_context_str = ""
+            # メモリIDが必要
+            if not memory_id:
+                raise ValueError("Memory ID is required for S3 workflow processing")
 
-            # 要約プロンプトの読み込み
-            try:
-                system_prompt = load_prompt(
-                    "summarize",
-                    bucket=bucket,
-                    key=key,
-                    user_id=actor_id,
-                    memory_context=memory_context_str,
-                )
-                logger.info("Loaded summarization prompt with memory context")
-            except FileNotFoundError:
-                logger.warning("summarize.txt prompt not found, using default")
-            except Exception as e:
-                logger.warning(f"Failed to load prompt: {e}")
+            # ワークフロー実行
+            profile_result = run_workflow(s3_info, actor_id, memory_id)
+            logger.info("Workflow completed successfully")
 
-            # S3用の命令文字列を生成
-            user_input = build_s3_instruction(bucket, key)
+            return {"statusCode": 200, "body": {"response": profile_result}}
 
+        # 通常モード - 既存のエージェント直接呼び出し
         # エージェント実行
-        response = run_agent(user_input, session_manager, system_prompt)
+        response = run_agent(user_input, session_manager)
 
         # レスポンスを文字列に変換（JSON serializable化）
         response_text = str(response) if response else ""
-
-        # Actor状態を保存（S3ファイル処理の場合のみ）
-        if memory_id and s3_info and file_key and response_text:
-            try:
-                past_summaries_count = len(memory_context.get("past_summaries", [])) if memory_context else 0
-                actor_state_summary = generate_actor_state_summary(
-                    file_key, response_text, past_summaries_count
-                )
-                save_actor_state(memory_id, actor_id, actor_state_summary)
-                logger.info("Actor state saved successfully")
-            except Exception as e:
-                logger.warning(f"Failed to save actor state: {e}")
 
         return {"statusCode": 200, "body": {"response": response_text}}
     except Exception as e:
