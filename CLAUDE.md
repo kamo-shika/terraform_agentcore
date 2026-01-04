@@ -148,96 +148,33 @@ AgentCoreは以下の形式のイベントで呼び出します：
 }
 ```
 
-## 開発ルール
+## 開発ルール（必須）
 
 このプロジェクトでは、`.claude/rules/`に定義されたルールを**必ず**遵守してください。
 
-| ルールファイル | 内容 |
-|--------------|------|
-| `.claude/rules/tdd.md` | TDD（テスト駆動開発）の必須ルール |
-| `.claude/rules/worktree.md` | Worktree運用の必須ルール |
+| ルール | 概要 | 詳細 |
+|-------|------|------|
+| **TDD** | Pythonコード実装時はテストを先に書く | `.claude/rules/tdd.md` |
+| **Worktree** | mainブランチでの直接作業禁止、別ワークツリーで作業 | `.claude/rules/worktree.md` |
 
-## TDD（テスト駆動開発）ワークフロー
+### クイックリファレンス
 
-**必須**: Pythonコード（`app/`、`lambda/`配下）を実装する際は、TDDを**必ず**実施してください。
+**TDD（Red-Green-Refactor）**:
+1. テストを先に書く → `make test` で失敗確認
+2. 最小限の実装 → `make test` で成功確認
+3. リファクタリング → `make test-cov` でカバレッジ確認
 
-詳細なルールは `.claude/rules/tdd.md` を参照してください。
-
-### Red-Green-Refactorサイクル
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ 1. Red（テストを先に書く）                                    │
-│    - test-specialist または自分でテストを先に作成             │
-│    - make test で失敗を確認                                   │
-├─────────────────────────────────────────────────────────────┤
-│ 2. Green（最小限の実装でテストを通す）                        │
-│    - python-developer または自分で実装                        │
-│    - make test で成功を確認                                   │
-├─────────────────────────────────────────────────────────────┤
-│ 3. Refactor（リファクタリング）                               │
-│    - コードを改善（テストは通ったまま維持）                    │
-│    - make test-cov でカバレッジを確認                         │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 新機能追加時の流れ
-
+**Worktree**:
 ```bash
-# 1. test-specialistがテストを実装（Red）
-Task(subagent_type="test-specialist", prompt="XX機能のテストケースを実装")
+# 作業開始
+git worktree add -b feature/issue-XX-description ../terraform_agentcore-issue-XX
 
-# 2. テスト実行して失敗を確認
-make test
+# PR作成
+git push -u origin feature/issue-XX-description && gh pr create
 
-# 3. python-developerが実装（Green）
-Task(subagent_type="python-developer", prompt="XX機能を実装してテストを通す")
-
-# 4. テスト実行して成功を確認
-make test
-
-# 5. カバレッジ確認
-make test-cov
+# クリーンアップ（マージ後）
+git worktree remove ../terraform_agentcore-issue-XX
 ```
-
-## Git/ブランチ戦略
-
-**必須**: すべての作業は別ワークツリーで実施し、マージ前にプルリクエストを作成してください。
-
-詳細なルールは `.claude/rules/worktree.md` を参照してください。
-
-### ワークフロー
-
-1. **別ワークツリーの作成**
-   ```bash
-   # Issue番号に基づいたブランチ名で別ワークツリー作成
-   git worktree add -b feature/issue-XX-description ../terraform_agentcore-issue-XX
-   cd ../terraform_agentcore-issue-XX
-   ```
-
-2. **作業実施** - コードの実装・修正・テスト
-
-3. **変更のコミット**
-   ```bash
-   git add .
-   git status
-   git diff --staged
-   git commit -m "[Issue #XX] 変更内容の要約"
-   ```
-
-4. **プルリクエスト作成**
-   ```bash
-   git push -u origin feature/issue-XX-description
-   gh pr create --title "Issue #XX対応: タイトル" --body "変更内容の説明"
-   ```
-
-5. **ワークツリーのクリーンアップ（マージ後）**
-   ```bash
-   cd ../terraform_agentcore
-   git worktree remove ../terraform_agentcore-issue-XX
-   git branch -d feature/issue-XX-description
-   git pull origin main
-   ```
 
 ## テスト
 
