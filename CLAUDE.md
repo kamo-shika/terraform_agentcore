@@ -172,6 +172,12 @@ git worktree add -b feature/issue-XX-description ../terraform_agentcore-issue-XX
 # PR作成
 git push -u origin feature/issue-XX-description && gh pr create
 
+# 実環境での動作確認（Pythonコード変更時）
+make deploy && make get-runtime-info
+
+# マージ（動作確認完了後）
+gh pr merge --squash
+
 # クリーンアップ（マージ後）
 git worktree remove ../terraform_agentcore-issue-XX
 ```
