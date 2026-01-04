@@ -3,8 +3,11 @@ app/main.pyのテスト。
 
 handler関数の動作を検証する。エージェント実行は課金が発生するためモックを使用。
 """
+
+import os
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock, ANY
 
 
 class TestHandler:
@@ -113,22 +116,24 @@ class TestHandler:
             mock_context: モックコンテキスト
             clean_env: 環境変数をクリーンにするフィクスチャ
         """
-        with patch("app.main.create_agent") as mock_create_agent:
-            mock_agent = MagicMock()
-            mock_agent.return_value = "S3ファイル要約結果"
-            mock_create_agent.return_value = mock_agent
+        # S3ワークフロー処理にはMemory IDが必要
+        os.environ["AGENTCORE_MEMORY_ID"] = "test-memory-id"
+
+        with patch("app.main.run_workflow") as mock_run_workflow:
+            mock_run_workflow.return_value = "User profile generated"
 
             from app.main import handler
 
             result = handler(sample_s3_event, mock_context)
 
             assert result["statusCode"] == 200
-            assert "S3ファイル要約結果" in result["body"]["response"]
+            assert "profile" in result["body"]["response"].lower() or "generated" in result["body"]["response"].lower()
 
-            # S3処理用の入力が生成されているか確認
-            call_args = mock_agent.call_args[0][0]
-            assert "test-bucket" in call_args
-            assert "test-folder/test-file.txt" in call_args
+            # run_workflowが正しいパラメータで呼ばれたか確認
+            mock_run_workflow.assert_called_once()
+            call_args = mock_run_workflow.call_args
+            assert call_args[0][0] == sample_s3_event["s3_info"]  # s3_info
+            assert call_args[0][2] == "test-memory-id"  # memory_id
 
     def test_handler_error_handling(self, sample_event, mock_context, clean_env):
         """
@@ -189,13 +194,7 @@ class TestHandler:
         from app.main import handler
 
         # bucketがNoneのケース
-        event_none_bucket = {
-            "input": {"text": ""},
-            "s3_info": {
-                "bucket": None,
-                "key": "test-key"
-            }
-        }
+        event_none_bucket = {"input": {"text": ""}, "s3_info": {"bucket": None, "key": "test-key"}}
 
         with patch("app.main.create_agent") as mock_create_agent:
             mock_agent = MagicMock()
@@ -208,13 +207,7 @@ class TestHandler:
             assert "error" in result["body"]
 
         # keyがNoneのケース
-        event_none_key = {
-            "input": {"text": ""},
-            "s3_info": {
-                "bucket": "test-bucket",
-                "key": None
-            }
-        }
+        event_none_key = {"input": {"text": ""}, "s3_info": {"bucket": "test-bucket", "key": None}}
 
         with patch("app.main.create_agent") as mock_create_agent:
             mock_agent = MagicMock()
@@ -333,9 +326,7 @@ class TestInitializeMemory:
             result = initialize_memory("test-memory-id", "test-session", "test-actor")
 
             assert result == mock_session_manager
-            mock_create_memory.assert_called_once_with(
-                "test-memory-id", "test-session", "test-actor"
-            )
+            mock_create_memory.assert_called_once_with("test-memory-id", "test-session", "test-actor")
 
     def test_initialize_memory_with_none_memory_id(self):
         """
@@ -402,9 +393,7 @@ class TestBuildS3Instruction:
         """
         from app.main import build_s3_instruction
 
-        result = build_s3_instruction(
-            "my-bucket-123", "folder-name/sub_folder/file-name_v2.txt"
-        )
+        result = build_s3_instruction("my-bucket-123", "folder-name/sub_folder/file-name_v2.txt")
 
         assert "my-bucket-123" in result
         assert "folder-name/sub_folder/file-name_v2.txt" in result
@@ -484,9 +473,7 @@ class TestRunAgent:
             result = run_agent("テスト入力", None, None)
 
             assert result == "エージェント応答"
-            mock_create_agent.assert_called_once_with(
-                session_manager=None, system_prompt=None
-            )
+            mock_create_agent.assert_called_once_with(session_manager=None, system_prompt=None)
             mock_agent.assert_called_once_with("テスト入力")
 
     def test_run_agent_with_session_manager(self):
@@ -504,9 +491,7 @@ class TestRunAgent:
             result = run_agent("入力", mock_session_manager, None)
 
             assert result == "セッション管理応答"
-            mock_create_agent.assert_called_once_with(
-                session_manager=mock_session_manager, system_prompt=None
-            )
+            mock_create_agent.assert_called_once_with(session_manager=mock_session_manager, system_prompt=None)
 
     def test_run_agent_with_system_prompt(self):
         """
@@ -522,9 +507,7 @@ class TestRunAgent:
             result = run_agent("入力", None, "カスタムシステムプロンプト")
 
             assert result == "カスタムプロンプト応答"
-            mock_create_agent.assert_called_once_with(
-                session_manager=None, system_prompt="カスタムシステムプロンプト"
-            )
+            mock_create_agent.assert_called_once_with(session_manager=None, system_prompt="カスタムシステムプロンプト")
 
     def test_run_agent_with_all_params(self):
         """
@@ -538,9 +521,7 @@ class TestRunAgent:
             mock_create_agent.return_value = mock_agent
 
             mock_session_manager = MagicMock()
-            result = run_agent(
-                "完全な入力", mock_session_manager, "完全なシステムプロンプト"
-            )
+            result = run_agent("完全な入力", mock_session_manager, "完全なシステムプロンプト")
 
             assert result == "完全な応答"
             mock_create_agent.assert_called_once_with(

@@ -5,10 +5,9 @@
 設定値は定数として定義され、実行時に動的に値を取得するヘルパー関数も提供する。
 また、アプリケーション全体のロギング設定も一元管理する。
 """
+
 import logging
 import os
-from typing import Optional
-
 
 # ========================================
 # 定数定義
@@ -56,6 +55,7 @@ ACTOR_STATE_TOP_K = int(os.getenv("ACTOR_STATE_TOP_K", "5"))
 # ロギング設定
 # ========================================
 
+
 def setup_logging() -> None:
     """
     アプリケーション全体のロギング設定を初期化する。
@@ -67,9 +67,7 @@ def setup_logging() -> None:
         None
     """
     logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
     )
 
 
@@ -80,6 +78,7 @@ setup_logging()
 # ========================================
 # ヘルパー関数
 # ========================================
+
 
 def get_session_id(event: dict) -> str:
     """
@@ -146,7 +145,7 @@ def get_input_text(event: dict) -> str:
     return "Hello"
 
 
-def get_memory_id() -> Optional[str]:
+def get_memory_id() -> str | None:
     """
     メモリIDを環境変数から取得する。
 

@@ -166,15 +166,7 @@ def s3_event_with_invalid_bucket():
     Returns:
         dict: bucketがNoneのS3イベント
     """
-    return {
-        "input": {
-            "text": ""
-        },
-        "s3_info": {
-            "bucket": None,
-            "key": "test-key"
-        }
-    }
+    return {"input": {"text": ""}, "s3_info": {"bucket": None, "key": "test-key"}}
 
 
 @pytest.fixture
@@ -187,15 +179,7 @@ def s3_event_with_invalid_key():
     Returns:
         dict: keyがNoneのS3イベント
     """
-    return {
-        "input": {
-            "text": ""
-        },
-        "s3_info": {
-            "bucket": "test-bucket",
-            "key": None
-        }
-    }
+    return {"input": {"text": ""}, "s3_info": {"bucket": "test-bucket", "key": None}}
 
 
 @pytest.fixture
@@ -208,15 +192,7 @@ def s3_event_with_empty_bucket():
     Returns:
         dict: bucketが空文字列のS3イベント
     """
-    return {
-        "input": {
-            "text": ""
-        },
-        "s3_info": {
-            "bucket": "",
-            "key": "test-key"
-        }
-    }
+    return {"input": {"text": ""}, "s3_info": {"bucket": "", "key": "test-key"}}
 
 
 @pytest.fixture
@@ -229,12 +205,4 @@ def s3_event_with_empty_key():
     Returns:
         dict: keyが空文字列のS3イベント
     """
-    return {
-        "input": {
-            "text": ""
-        },
-        "s3_info": {
-            "bucket": "test-bucket",
-            "key": ""
-        }
-    }
+    return {"input": {"text": ""}, "s3_info": {"bucket": "test-bucket", "key": ""}}

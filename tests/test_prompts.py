@@ -4,8 +4,9 @@ app/prompts/loader.py のテスト。
 プロンプト読み込みユーティリティをテストする。
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 
 class TestLoadPrompt:
@@ -17,7 +18,7 @@ class TestLoadPrompt:
         """
         load_promptが文字列を返すことを確認する。
         """
-        from app.prompts import load_prompt, list_prompts
+        from app.prompts import list_prompts, load_prompt
 
         # 既存のプロンプトがあればテスト
         available_prompts = list_prompts()
@@ -53,6 +54,7 @@ class TestLoadPrompt:
         monkeypatch.setattr(loader, "PROMPTS_DIR", tmp_path)
 
         from app.prompts.loader import load_prompt
+
         result = load_prompt("test_template", user_name="Alice", place="Tokyo")
 
         assert result == "Hello, Alice! Welcome to Tokyo."
@@ -72,6 +74,7 @@ class TestLoadPrompt:
         monkeypatch.setattr(loader, "PROMPTS_DIR", tmp_path)
 
         from app.prompts.loader import load_prompt
+
         result = load_prompt("simple")
 
         assert result == test_prompt_content
@@ -106,6 +109,7 @@ class TestListPrompts:
         monkeypatch.setattr(loader, "PROMPTS_DIR", tmp_path)
 
         from app.prompts.loader import list_prompts
+
         result = list_prompts()
 
         assert "prompt1" in result
@@ -125,6 +129,7 @@ class TestListPrompts:
         monkeypatch.setattr(loader, "PROMPTS_DIR", empty_dir)
 
         from app.prompts.loader import list_prompts
+
         result = list_prompts()
 
         assert result == []
