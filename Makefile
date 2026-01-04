@@ -107,14 +107,25 @@ login:
 	aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_URL)
 
 # Dockerイメージをビルド（Memory IDを環境変数として注入）
+# 注意: MEMORY_IDが取得できない場合はビルドを中止する（壊れたイメージのデプロイを防止）
 build:
-	@if [ -n "$(MEMORY_ID)" ]; then \
-		echo "Building with AGENTCORE_MEMORY_ID=$(MEMORY_ID)"; \
-		docker build --build-arg AGENTCORE_MEMORY_ID=$(MEMORY_ID) -t $(REPO_NAME) .; \
-	else \
-		echo "Warning: MEMORY_ID not found. Building without LTM support."; \
-		docker build -t $(REPO_NAME) .; \
+	@if [ -z "$(MEMORY_ID)" ]; then \
+		echo ""; \
+		echo "Error: MEMORY_ID is required but not found."; \
+		echo ""; \
+		echo "Possible causes:"; \
+		echo "  1. Terraform state is not initialized (run 'make init' first)"; \
+		echo "  2. AgentCore Memory resource has not been created (run 'make apply' first)"; \
+		echo "  3. Working from a worktree without terraform state"; \
+		echo ""; \
+		echo "Solutions:"; \
+		echo "  - Run 'make init && make apply' to initialize terraform state"; \
+		echo "  - Or deploy from the main worktree where terraform state is available"; \
+		echo ""; \
+		exit 1; \
 	fi
+	@echo "Building with AGENTCORE_MEMORY_ID=$(MEMORY_ID)"
+	docker build --build-arg AGENTCORE_MEMORY_ID=$(MEMORY_ID) -t $(REPO_NAME) .
 
 push: login build
 	docker tag $(REPO_NAME):latest $(IMAGE_URI_LATEST)
