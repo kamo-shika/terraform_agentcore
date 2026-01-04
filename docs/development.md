@@ -45,6 +45,12 @@ tests/
 ├── conftest.py              # 共通フィクスチャとpytest設定
 ├── test_main.py             # app/main.pyのテスト
 ├── test_agent.py            # app/agent.pyのテスト
+├── test_memory.py           # app/memory.pyのテスト
+├── test_tools.py            # app/tools.pyのテスト（カスタムツール）
+├── test_workflow.py         # app/workflow.pyのテスト（ワークフロー）
+├── test_config.py           # app/config.pyのテスト
+├── test_prompts.py          # app/prompts/のテスト
+├── test_server.py           # app/server.pyのテスト
 └── fixtures/                # テストデータとヘルパー
     └── __init__.py
 ```
@@ -140,7 +146,17 @@ git push -u origin feature/issue-XX-description
 gh pr create --title "Issue #XX対応: タイトル" --body "変更内容の説明"
 ```
 
-#### 5. ワークツリーのクリーンアップ（マージ後）
+#### 5. 実環境での動作確認（Pythonコード変更時）
+
+```bash
+# ワークツリーからデプロイ
+make deploy
+
+# Runtime情報を確認
+make get-runtime-info
+```
+
+#### 6. ワークツリーのクリーンアップ（マージ後）
 
 ```bash
 cd ../terraform_agentcore
@@ -169,24 +185,74 @@ agent = Agent(
 
 ### Memory統合
 
-`app/memory.py` の `create_memory()` 関数を使用して Memory を統合できます：
+Memory機能は以下の2つの方法で利用可能です。
 
-1. `main.py` でインポート
-2. eventからmemory_id、session_id、actor_idを抽出
-3. session_managerをエージェント設定に渡す
+#### 1. セッションメモリ（短期記憶）
+
+```python
+from app.memory import create_memory
+session_manager = create_memory(memory_id, session_id, actor_id)
+agent = create_agent(session_manager=session_manager)
+```
+
+#### 2. カスタムツール（長期記憶）
+
+```python
+from app.tools import retrieve_memory_tool, save_memory_tool
+
+# 過去の要約を取得
+records = retrieve_memory_tool(memory_id, actor_id, query="検索クエリ")
+
+# メモリに保存
+record_id = save_memory_tool(
+    namespace="/file-summaries/{actorId}",
+    memory_id=memory_id,
+    actor_id=actor_id,
+    content="保存するコンテンツ"
+)
+```
+
+#### Namespace設計
+
+| Namespace | 用途 |
+|-----------|------|
+| `/file-summaries/{actorId}` | ファイル要約の保存 |
+| `/actor-state/{actorId}` | ユーザープロファイルの保存 |
+
+### ワークフロー機能
+
+S3ファイルアップロードをトリガーに、3ステップのワークフローを実行します。
+
+```python
+from app.workflow import run_workflow
+
+result = run_workflow(
+    s3_info={"bucket": "bucket-name", "key": "path/to/file.txt"},
+    actor_id="user-123",
+    memory_id="agentcore_memory-xxx"
+)
+```
+
+#### ワークフロー定義のカスタマイズ
+
+| ファイル | 用途 |
+|---------|------|
+| `app/prompts/workflow/summarize.md` | 要約タスクのプロンプト |
+| `app/prompts/workflow/analyze.md` | 分析タスクのプロンプト |
+| `app/prompts/workflow/profile.md` | プロファイル生成タスクのプロンプト |
 
 ## サブエージェント
 
 Claude Codeが使用する専門サブエージェント：
 
-| エージェント | 専門領域 |
-|-------------|---------|
-| `terraform-specialist` | Terraform/AWSインフラ構築、IAM設計 |
-| `python-developer` | Pythonアプリケーション、Lambda関数実装 |
-| `strands-agent-developer` | Strands Agents、AgentCore統合 |
-| `integrator` | 統合検証、デプロイ確認 |
-| `test-specialist` | TDD、テスト実装、カバレッジ分析 |
-| `cloudwatch-investigator` | CloudWatchログ調査、エラー分析 |
+| エージェント | 専門領域 | 定義ファイル |
+|-------------|---------|-------------|
+| `terraform-specialist` | Terraform/AWSインフラ構築、IAM設計 | `.claude/agents/terraform-specialist.md` |
+| `python-developer` | Pythonアプリケーション、Lambda関数実装 | `.claude/agents/python-developer.md` |
+| `strands-agent-developer` | Strands Agents、AgentCore統合 | `.claude/agents/strands-agent-developer.md` |
+| `integrator` | 統合検証、デプロイ確認 | `.claude/agents/integrator.md` |
+| `test-specialist` | TDD、テスト実装、カバレッジ分析 | `.claude/agents/test-specialist.md` |
+| `cloudwatch-investigator` | CloudWatchログ調査、エラー分析 | `.claude/agents/cloudwatch-investigator.md` |
 
 詳細は `.claude/agents/` ディレクトリを参照してください。
 

@@ -67,9 +67,19 @@ aws bedrock-agentcore-runtime invoke-agent-runtime \
     output2.json
 ```
 
-## S3トリガーによる呼び出し
+## S3ワークフロー呼び出し
 
-S3バケットにファイルをアップロードしてLambda経由でエージェントを呼び出します。
+S3バケットにファイルをアップロードすると、Lambda経由でAgentCoreの3ステップワークフローが実行されます。
+
+### ワークフロー概要
+
+```
+Step 1: S3ファイル読み取り → 要約生成 → メモリ保存
+    ↓
+Step 2: 過去の要約を取得 → パターン分析
+    ↓
+Step 3: ユーザープロファイル生成 → メモリ保存
+```
 
 ### テストファイルのアップロード
 
@@ -78,10 +88,11 @@ S3バケットにファイルをアップロードしてLambda経由でエージ
 echo "これはテストファイルです。内容を要約してください。" > /tmp/test_file.txt
 
 # S3にアップロード（Lambda → AgentCore が起動）
-aws s3 cp /tmp/test_file.txt s3://agentcore-trigger-bucket/test_file.txt
+# Actor IDはファイルパスから抽出（例: daily-reports/tanaka-taro/file.txt → tanaka-taro）
+aws s3 cp /tmp/test_file.txt s3://agentcore-trigger-bucket/daily-reports/test-user/test_file.txt
 
 # アップロード確認
-aws s3 ls s3://agentcore-trigger-bucket/
+aws s3 ls s3://agentcore-trigger-bucket/daily-reports/
 ```
 
 ### Lambda実行ログの確認
