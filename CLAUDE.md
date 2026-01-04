@@ -148,42 +148,33 @@ AgentCoreは以下の形式のイベントで呼び出します：
 }
 ```
 
-## Git/ブランチ戦略
+## 開発ルール（必須）
 
-**重要**: すべての作業は別ワークツリーで実施し、マージ前にプルリクエストを作成してください。
+このプロジェクトでは、`.claude/rules/`に定義されたルールを**必ず**遵守してください。
 
-### ワークフロー
+| ルール | 概要 | 詳細 |
+|-------|------|------|
+| **TDD** | Pythonコード実装時はテストを先に書く | `.claude/rules/tdd.md` |
+| **Worktree** | mainブランチでの直接作業禁止、別ワークツリーで作業 | `.claude/rules/worktree.md` |
 
-1. **別ワークツリーの作成**
-   ```bash
-   # Issue番号に基づいたブランチ名で別ワークツリー作成
-   git worktree add -b feature/issue-XX-description ../terraform_agentcore-issue-XX
-   cd ../terraform_agentcore-issue-XX
-   ```
+### クイックリファレンス
 
-2. **作業実施** - コードの実装・修正・テスト
+**TDD（Red-Green-Refactor）**:
+1. テストを先に書く → `make test` で失敗確認
+2. 最小限の実装 → `make test` で成功確認
+3. リファクタリング → `make test-cov` でカバレッジ確認
 
-3. **変更のコミット**
-   ```bash
-   git add .
-   git status
-   git diff --staged
-   git commit -m "[Issue #XX] 変更内容の要約"
-   ```
+**Worktree**:
+```bash
+# 作業開始
+git worktree add -b feature/issue-XX-description ../terraform_agentcore-issue-XX
 
-4. **プルリクエスト作成**
-   ```bash
-   git push -u origin feature/issue-XX-description
-   gh pr create --title "Issue #XX対応: タイトル" --body "変更内容の説明"
-   ```
+# PR作成
+git push -u origin feature/issue-XX-description && gh pr create
 
-5. **ワークツリーのクリーンアップ（マージ後）**
-   ```bash
-   cd ../terraform_agentcore
-   git worktree remove ../terraform_agentcore-issue-XX
-   git branch -d feature/issue-XX-description
-   git pull origin main
-   ```
+# クリーンアップ（マージ後）
+git worktree remove ../terraform_agentcore-issue-XX
+```
 
 ## テスト
 
@@ -231,53 +222,7 @@ tests/
 - boto3クライアントを安易にモック化する
 - テストの簡便さのためだけにモックを使用する
 
-### TDD（テスト駆動開発）ワークフロー
-
-このプロジェクトでは、`test-specialist`エージェントを使用したTDDを推奨しています。
-
-#### Red-Green-Refactorサイクル
-
-1. **Red（テストを先に書く）**
-   - `test-specialist`が要件からテストを先に実装
-   - テストを実行して失敗を確認
-
-2. **Green（最小限の実装でテストを通す）**
-   - `python-developer`がテストを通す最小限のコードを実装
-   - テストを実行して成功を確認
-
-3. **Refactor（リファクタリング）**
-   - `python-developer`がコードを改善
-   - テストが通ることを確認しながら改善
-
-4. **Integration（統合検証）**
-   - `integrator`がエンドツーエンドで動作確認
-
-#### 新機能追加時の流れ
-
-```bash
-# 1. test-specialistがテストを実装（Red）
-Task(subagent_type="test-specialist", prompt="XX機能のテストケースを実装")
-
-# 2. テスト実行して失敗を確認
-make test
-
-# 3. python-developerが実装（Green）
-Task(subagent_type="python-developer", prompt="XX機能を実装してテストを通す")
-
-# 4. テスト実行して成功を確認
-make test
-
-# 5. 必要に応じてリファクタリング（Refactor）
-Task(subagent_type="python-developer", prompt="XX機能をリファクタリング")
-
-# 6. カバレッジ確認
-make test-cov
-
-# 7. 統合テスト（Integration）
-Task(subagent_type="integrator", prompt="XX機能のエンドツーエンドテスト")
-```
-
-#### フィクスチャの活用
+### フィクスチャの活用
 
 `tests/conftest.py`に定義された共通フィクスチャを活用してください：
 
