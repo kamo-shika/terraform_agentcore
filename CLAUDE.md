@@ -20,9 +20,9 @@
 - `app/tools.py` - カスタムツール（retrieve_memory_tool, save_memory_tool）
 - `app/workflow.py` - S3ファイル要約ワークフロー（3ステップ処理）
 - `app/prompts/` - プロンプトテンプレート
-  - `workflow/summarize.txt` - S3ファイル要約用
-  - `workflow/analyze.txt` - パターン分析用
-  - `workflow/profile.txt` - プロファイル生成用
+  - `workflow/summarize.md` - S3ファイル要約用
+  - `workflow/analyze.md` - パターン分析用
+  - `workflow/profile.md` - プロファイル生成用
 
 ### インフラストラクチャ（Terraform）
 - `terraform/agentcore.tf` - AgentCore RuntimeとMemoryリソース
@@ -188,9 +188,9 @@ result = run_workflow(
 ```
 
 **ワークフロー定義のカスタマイズ**:
-- `app/prompts/workflow/summarize.txt` - 要約タスクのプロンプト
-- `app/prompts/workflow/analyze.txt` - 分析タスクのプロンプト
-- `app/prompts/workflow/profile.txt` - プロファイル生成タスクのプロンプト
+- `app/prompts/workflow/summarize.md` - 要約タスクのプロンプト
+- `app/prompts/workflow/analyze.md` - 分析タスクのプロンプト
+- `app/prompts/workflow/profile.md` - プロファイル生成タスクのプロンプト
 
 ### イベント構造
 AgentCoreは以下の形式のイベントで呼び出します（S3ワークフローモードのみサポート）：
