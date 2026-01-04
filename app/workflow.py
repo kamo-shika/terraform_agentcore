@@ -31,7 +31,7 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
     try:
         summarize_prompt = load_prompt("workflow/summarize")
     except FileNotFoundError:
-        logger.warning("workflow/summarize.txt not found, using default prompt")
+        logger.warning("workflow/summarize.md not found, using default prompt")
         summarize_prompt = (
             "あなたはS3ファイルを読み取り、内容を要約するエージェントです。\n"
             "use_awsツールを使用してS3ファイルの内容を取得し、\n"
@@ -41,7 +41,7 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
     try:
         analyze_prompt = load_prompt("workflow/analyze")
     except FileNotFoundError:
-        logger.warning("workflow/analyze.txt not found, using default prompt")
+        logger.warning("workflow/analyze.md not found, using default prompt")
         analyze_prompt = (
             "あなたは過去の要約データを分析するエージェントです。\n"
             "retrieve_memory_toolを使用して過去の要約を取得し、\n"
@@ -51,7 +51,7 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
     try:
         profile_prompt = load_prompt("workflow/profile")
     except FileNotFoundError:
-        logger.warning("workflow/profile.txt not found, using default prompt")
+        logger.warning("workflow/profile.md not found, using default prompt")
         profile_prompt = (
             "あなたはユーザープロファイルを生成するエージェントです。\n"
             "分析結果に基づいてユーザーの特性や傾向をまとめ、\n"
