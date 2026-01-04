@@ -238,19 +238,23 @@ class TestSaveMemoryTool:
 
             # Assert
             call_args = mock_client.batch_create_memory_records.call_args
-            records = call_args.kwargs["memoryRecords"]
+            records = call_args.kwargs["records"]
             assert len(records) == 1
             record = records[0]
 
-            # Namespace内の{actorId}が解決されている
-            assert record["namespace"] == "/custom-namespace/user-456"
+            # Namespace内の{actorId}が解決されている（配列として渡される）
+            assert record["namespaces"] == ["/custom-namespace/user-456"]
 
             # コンテンツが設定されている
             assert record["content"]["text"] == "テストコンテンツ"
 
-            # メタデータにactorIdが含まれている
-            assert record["metadata"]["actorId"] == "user-456"
-            assert record["metadata"]["type"] == "memory"
+            # requestIdentifierが設定されている
+            assert "requestIdentifier" in record
+            assert record["requestIdentifier"].startswith("memory-")
+
+            # timestampが設定されている
+            assert "timestamp" in record
+            assert isinstance(record["timestamp"], int)
 
     def test_save_with_empty_content_returns_none(self):
         """
@@ -335,11 +339,11 @@ class TestSaveMemoryTool:
             # Assert
             assert result is None
 
-    def test_save_generates_unique_record_id(self):
+    def test_save_generates_unique_request_identifier(self):
         """
-        保存時にユニークなレコードIDが生成されることを確認する。
+        保存時にユニークなリクエストIDが生成されることを確認する。
 
-        各保存操作で異なるmemoryRecordIdが生成されることを検証する。
+        各保存操作で異なるrequestIdentifierが生成されることを検証する。
         """
         from app.tools import save_memory_tool
 
@@ -358,11 +362,11 @@ class TestSaveMemoryTool:
                 namespace="/test-namespace", memory_id="test-memory-id", actor_id="test-actor", content="コンテンツ2"
             )
 
-            # Assert - 2回の呼び出しで異なるレコードIDが使用されている
+            # Assert - 2回の呼び出しで異なるrequestIdentifierが使用されている
             calls = mock_client.batch_create_memory_records.call_args_list
             assert len(calls) == 2
 
-            record_id_1 = calls[0].kwargs["memoryRecords"][0]["memoryRecordId"]
-            record_id_2 = calls[1].kwargs["memoryRecords"][0]["memoryRecordId"]
+            request_id_1 = calls[0].kwargs["records"][0]["requestIdentifier"]
+            request_id_2 = calls[1].kwargs["records"][0]["requestIdentifier"]
 
-            assert record_id_1 != record_id_2
+            assert request_id_1 != request_id_2

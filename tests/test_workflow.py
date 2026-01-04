@@ -253,17 +253,18 @@ class TestRunWorkflow:
         memory_id = "test-memory-id"
         actor_id = "test-actor"
 
-        # Mock the workflow execution
-        with patch("app.workflow.workflow") as mock_workflow_tool:
-            # create action
-            mock_workflow_tool.return_value = {"status": "success", "content": [{"text": "Workflow created"}]}
+        # Mock the Agent
+        with patch("app.workflow.Agent") as mock_agent_class:
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "Workflow completed successfully"
 
             # Act
-            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            result = run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
 
             # Assert
-            # ワークフローツールが呼ばれたことを確認
-            assert mock_workflow_tool.called
+            # Agentが呼ばれたことを確認
+            assert mock_agent_instance.called
+            assert result == "Workflow completed successfully"
 
     def test_run_workflow_without_s3_info_raises_error(self):
         """
@@ -329,44 +330,24 @@ class TestRunWorkflow:
         memory_id = "test-memory-id"
         actor_id = "test-actor"
 
-        # Mock workflow execution
-        with patch("app.workflow.workflow") as mock_workflow_tool:
-            # Mock create response
-            def workflow_side_effect(action, **kwargs):
-                if action == "create":
-                    return {"status": "success", "content": [{"text": "Workflow created"}]}
-                elif action == "start":
-                    return {"status": "success", "content": [{"text": "Workflow completed"}]}
-                elif action == "status":
-                    # Mock completed workflow with profile result
-                    return {
-                        "status": "success",
-                        "workflow": {
-                            "task_results": {
-                                "generate_profile": {
-                                    "status": "completed",
-                                    "result": [{"text": "User profile generated"}],
-                                }
-                            }
-                        },
-                    }
-                return {"status": "error"}
-
-            mock_workflow_tool.side_effect = workflow_side_effect
+        # Mock Agent
+        with patch("app.workflow.Agent") as mock_agent_class:
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "User profile: Technical user with data analysis focus"
 
             # Act
             result = run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
 
             # Assert
             assert result is not None
-            assert "profile" in result or "result" in result
+            assert "profile" in result.lower() or "user" in result.lower()
 
     def test_run_workflow_creates_workflow_with_correct_parameters(self):
         """
         ワークフロー作成時に正しいパラメータが渡されることを確認。
 
-        S3情報、memory_id、actor_idがワークフロータスクの
-        descriptionやsystem_promptに適切に埋め込まれることを検証する。
+        S3情報、memory_id、actor_idがAgentのプロンプトに
+        適切に埋め込まれることを検証する。
         """
         from app.workflow import run_workflow
 
@@ -375,31 +356,31 @@ class TestRunWorkflow:
         memory_id = "memory-123"
         actor_id = "user-456"
 
-        # Mock workflow tool
-        with patch("app.workflow.workflow") as mock_workflow_tool:
-            mock_workflow_tool.return_value = {"status": "success", "content": [{"text": "Created"}]}
+        # Mock Agent
+        with patch("app.workflow.Agent") as mock_agent_class:
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "Workflow completed"
 
             # Act
             run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
 
             # Assert
-            # createアクションが呼ばれたことを確認
-            create_call = None
-            for call in mock_workflow_tool.call_args_list:
-                if call.kwargs.get("action") == "create":
-                    create_call = call
-                    break
+            # Agentが正しいツールで作成されたことを確認
+            call_kwargs = mock_agent_class.call_args.kwargs
+            assert "tools" in call_kwargs
+            # Agentのプロンプトにパラメータが含まれることを確認
+            prompt_arg = mock_agent_instance.call_args[0][0]
+            assert "test-bucket" in prompt_arg
+            assert "data/file.txt" in prompt_arg
+            assert memory_id in prompt_arg
+            assert actor_id in prompt_arg
 
-            assert create_call is not None
-            # タスクリストが渡されたことを確認
-            assert "tasks" in create_call.kwargs
-
-    def test_run_workflow_starts_workflow_after_creation(self):
+    def test_run_workflow_uses_agent_with_correct_tools(self):
         """
-        ワークフロー作成後にstartアクションが呼ばれることを確認。
+        ワークフローがAgentを正しいツールで作成することを確認。
 
-        ワークフローの作成（create）に続いて、実行開始（start）が
-        行われることを検証する。
+        Agentにworkflow、use_aws、save_memory_tool、retrieve_memory_toolが
+        渡されることを検証する。
         """
         from app.workflow import run_workflow
 
@@ -408,15 +389,20 @@ class TestRunWorkflow:
         memory_id = "test-memory-id"
         actor_id = "test-actor"
 
-        # Mock workflow tool
-        with patch("app.workflow.workflow") as mock_workflow_tool:
-            mock_workflow_tool.return_value = {"status": "success", "content": [{"text": "OK"}]}
+        # Mock Agent
+        with patch("app.workflow.Agent") as mock_agent_class:
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "Workflow completed"
 
             # Act
             run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
 
             # Assert
-            # createとstartの両方が呼ばれたことを確認
-            actions_called = [call.kwargs.get("action") for call in mock_workflow_tool.call_args_list]
-            assert "create" in actions_called
-            assert "start" in actions_called
+            # Agentが作成されたことを確認
+            assert mock_agent_class.called
+            # toolsが渡されたことを確認
+            call_kwargs = mock_agent_class.call_args.kwargs
+            assert "tools" in call_kwargs
+            tools = call_kwargs["tools"]
+            # 4つのツールが渡されることを確認
+            assert len(tools) == 4
