@@ -22,12 +22,13 @@ logger = logging.getLogger(__name__)
 # ==============================================================================
 # OpenTelemetry設定
 # ==============================================================================
-# StrandsTelemetryを初期化してOTLPエクスポーターを設定
-# AgentCore Runtimeがテレメトリデータを収集し、CloudWatchに配信する
+# StrandsTelemetryを初期化
+# 注意: setup_otlp_exporter()は呼び出さない
+# AgentCore Runtime環境にはOTLPコレクターが存在しないため、
+# localhost:4318への接続エラーが発生する（Issue #105）
 try:
     strands_telemetry = StrandsTelemetry()
-    strands_telemetry.setup_otlp_exporter()
-    logger.info("StrandsTelemetry initialized with OTLP exporter")
+    logger.info("StrandsTelemetry initialized")
 except Exception as e:
     # テレメトリ初期化に失敗してもサーバーは起動を続行
     logger.warning(f"Failed to initialize StrandsTelemetry: {e}")
