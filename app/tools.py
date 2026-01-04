@@ -151,25 +151,22 @@ def save_memory_tool(
     client = _get_agentcore_client()
     resolved_namespace = _resolve_namespace(namespace, actor_id)
 
-    # ユニークなレコードIDを生成
-    record_id = f"memory-{actor_id}-{uuid.uuid4().hex[:8]}"
-    timestamp = datetime.now(UTC).isoformat()
+    # ユニークなリクエストIDを生成
+    request_id = f"memory-{actor_id}-{uuid.uuid4().hex[:8]}"
+    # UNIXタイムスタンプ（秒）を整数で取得
+    timestamp = int(datetime.now(UTC).timestamp())
 
     try:
         response = client.batch_create_memory_records(
             memoryId=memory_id,
-            memoryRecords=[
+            records=[
                 {
-                    "memoryRecordId": record_id,
-                    "namespace": resolved_namespace,
+                    "requestIdentifier": request_id,
+                    "namespaces": [resolved_namespace],
                     "content": {
                         "text": content,
                     },
-                    "metadata": {
-                        "actorId": actor_id,
-                        "createdAt": timestamp,
-                        "type": "memory",
-                    },
+                    "timestamp": timestamp,
                 }
             ],
         )
