@@ -56,6 +56,26 @@ session_manager = AgentCoreMemorySessionManager(
 )
 ```
 
+## 作業プロセス（TDD必須）
+
+**重要**: `.claude/rules/tdd.md`のルールに従い、TDDで開発してください。
+
+### ツール・機能追加時
+
+1. **現状把握**: 既存の`app/agent.py`、`app/tools/`を確認
+2. **テストを先に書く（Red）**
+   - `tests/test_xxx.py`を先に作成
+   - または `test-specialist` に依頼
+   - `make test` で失敗を確認
+3. **実装（Green）**: テストを通す最小限のコードを実装
+4. **テスト確認**: `make test` で成功を確認
+5. **カバレッジ確認**: `make test-cov` で確認
+
+### 禁止事項
+
+- テストなしで実装コードをコミットすること
+- テストが失敗したままコミットすること
+
 ## ツール実装ガイドライン
 
 - **すべてのコメントとdocstringは日本語で記載**

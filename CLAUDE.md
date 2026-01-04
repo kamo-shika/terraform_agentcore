@@ -148,9 +148,63 @@ AgentCoreは以下の形式のイベントで呼び出します：
 }
 ```
 
+## 開発ルール
+
+このプロジェクトでは、`.claude/rules/`に定義されたルールを**必ず**遵守してください。
+
+| ルールファイル | 内容 |
+|--------------|------|
+| `.claude/rules/tdd.md` | TDD（テスト駆動開発）の必須ルール |
+| `.claude/rules/worktree.md` | Worktree運用の必須ルール |
+
+## TDD（テスト駆動開発）ワークフロー
+
+**必須**: Pythonコード（`app/`、`lambda/`配下）を実装する際は、TDDを**必ず**実施してください。
+
+詳細なルールは `.claude/rules/tdd.md` を参照してください。
+
+### Red-Green-Refactorサイクル
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Red（テストを先に書く）                                    │
+│    - test-specialist または自分でテストを先に作成             │
+│    - make test で失敗を確認                                   │
+├─────────────────────────────────────────────────────────────┤
+│ 2. Green（最小限の実装でテストを通す）                        │
+│    - python-developer または自分で実装                        │
+│    - make test で成功を確認                                   │
+├─────────────────────────────────────────────────────────────┤
+│ 3. Refactor（リファクタリング）                               │
+│    - コードを改善（テストは通ったまま維持）                    │
+│    - make test-cov でカバレッジを確認                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 新機能追加時の流れ
+
+```bash
+# 1. test-specialistがテストを実装（Red）
+Task(subagent_type="test-specialist", prompt="XX機能のテストケースを実装")
+
+# 2. テスト実行して失敗を確認
+make test
+
+# 3. python-developerが実装（Green）
+Task(subagent_type="python-developer", prompt="XX機能を実装してテストを通す")
+
+# 4. テスト実行して成功を確認
+make test
+
+# 5. カバレッジ確認
+make test-cov
+```
+
 ## Git/ブランチ戦略
 
-**重要**: すべての作業は別ワークツリーで実施し、マージ前にプルリクエストを作成してください。
+**必須**: すべての作業は別ワークツリーで実施し、マージ前にプルリクエストを作成してください。
+
+詳細なルールは `.claude/rules/worktree.md` を参照してください。
 
 ### ワークフロー
 
@@ -231,53 +285,7 @@ tests/
 - boto3クライアントを安易にモック化する
 - テストの簡便さのためだけにモックを使用する
 
-### TDD（テスト駆動開発）ワークフロー
-
-このプロジェクトでは、`test-specialist`エージェントを使用したTDDを推奨しています。
-
-#### Red-Green-Refactorサイクル
-
-1. **Red（テストを先に書く）**
-   - `test-specialist`が要件からテストを先に実装
-   - テストを実行して失敗を確認
-
-2. **Green（最小限の実装でテストを通す）**
-   - `python-developer`がテストを通す最小限のコードを実装
-   - テストを実行して成功を確認
-
-3. **Refactor（リファクタリング）**
-   - `python-developer`がコードを改善
-   - テストが通ることを確認しながら改善
-
-4. **Integration（統合検証）**
-   - `integrator`がエンドツーエンドで動作確認
-
-#### 新機能追加時の流れ
-
-```bash
-# 1. test-specialistがテストを実装（Red）
-Task(subagent_type="test-specialist", prompt="XX機能のテストケースを実装")
-
-# 2. テスト実行して失敗を確認
-make test
-
-# 3. python-developerが実装（Green）
-Task(subagent_type="python-developer", prompt="XX機能を実装してテストを通す")
-
-# 4. テスト実行して成功を確認
-make test
-
-# 5. 必要に応じてリファクタリング（Refactor）
-Task(subagent_type="python-developer", prompt="XX機能をリファクタリング")
-
-# 6. カバレッジ確認
-make test-cov
-
-# 7. 統合テスト（Integration）
-Task(subagent_type="integrator", prompt="XX機能のエンドツーエンドテスト")
-```
-
-#### フィクスチャの活用
+### フィクスチャの活用
 
 `tests/conftest.py`に定義された共通フィクスチャを活用してください：
 
