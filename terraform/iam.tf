@@ -170,3 +170,101 @@ resource "aws_iam_role_policy_attachment" "agent_memory_attach" {
   policy_arn = aws_iam_policy.agent_memory_access.arn
   role       = aws_iam_role.agent_role.name
 }
+
+# ==============================================================================
+# Data Sources
+# ==============================================================================
+# IAMポリシーでリージョンやアカウントIDを動的に取得するためのデータソース
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
+# ==============================================================================
+# IAM Policy: CloudWatch Logs Access
+# ==============================================================================
+# AgentCore RuntimeがCloudWatch Logsにログを出力するためのポリシー
+# runtime-logs（コンテナのstdout/stderr）の出力に必要
+# 参考: https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html
+resource "aws_iam_policy" "agent_logs_access" {
+  name        = "${var.project_name}-agent-logs-policy"
+  description = "AgentCore RuntimeがCloudWatch Logsにログを出力するためのポリシー"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "CreateLogGroup"
+        Effect = "Allow"
+        Action = [
+          "logs:DescribeLogStreams",
+          "logs:CreateLogGroup"
+        ]
+        Resource = [
+          "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock-agentcore/runtimes/*"
+        ]
+      },
+      {
+        Sid    = "DescribeLogGroups"
+        Effect = "Allow"
+        Action = [
+          "logs:DescribeLogGroups"
+        ]
+        Resource = [
+          "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:*"
+        ]
+      },
+      {
+        Sid    = "WriteLogEvents"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = [
+          "arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:log-group:/aws/bedrock-agentcore/runtimes/*:log-stream:*"
+        ]
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "agent_logs_attach" {
+  policy_arn = aws_iam_policy.agent_logs_access.arn
+  role       = aws_iam_role.agent_role.name
+}
+
+# ==============================================================================
+# IAM Policy: X-Ray Access
+# ==============================================================================
+# AgentCore RuntimeがX-Rayにトレースデータを送信するためのポリシー
+# 分散トレーシングとパフォーマンス分析に必要
+# 参考: https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/runtime-permissions.html
+resource "aws_iam_policy" "agent_xray_access" {
+  name        = "${var.project_name}-agent-xray-policy"
+  description = "AgentCore RuntimeがX-Rayにトレースを送信するためのポリシー"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "XRayAccess"
+        Effect = "Allow"
+        Action = [
+          "xray:PutTraceSegments",
+          "xray:PutTelemetryRecords",
+          "xray:GetSamplingRules",
+          "xray:GetSamplingTargets"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "agent_xray_attach" {
+  policy_arn = aws_iam_policy.agent_xray_access.arn
+  role       = aws_iam_role.agent_role.name
+}
