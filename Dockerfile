@@ -9,6 +9,9 @@ ARG AGENTCORE_MEMORY_ID=""
 # 環境変数設定
 ENV AGENTCORE_MEMORY_ID=${AGENTCORE_MEMORY_ID}
 ENV LTM_ENABLED=true
+# strands_toolsがホームディレクトリにワークフロー用ディレクトリを作成するため、
+# 書き込み可能な/tmpをHOMEに設定
+ENV HOME=/tmp
 
 # 非rootユーザーを作成
 RUN groupadd --gid 1000 appuser && \
