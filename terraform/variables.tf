@@ -19,7 +19,7 @@ variable "environment" {
 variable "lambda_runtime" {
   description = "Lambda関数のランタイムバージョン"
   type        = string
-  default     = "python3.12"
+  default     = "python3.13"
 }
 
 variable "lambda_timeout_seconds" {
