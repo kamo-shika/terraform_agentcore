@@ -12,11 +12,25 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from strands.telemetry import StrandsTelemetry
 
 from .main import handler
 
 # ロギング設定はconfig.pyで一元管理されている
 logger = logging.getLogger(__name__)
+
+# ==============================================================================
+# OpenTelemetry設定
+# ==============================================================================
+# StrandsTelemetryを初期化してOTLPエクスポーターを設定
+# AgentCore Runtimeがテレメトリデータを収集し、CloudWatchに配信する
+try:
+    strands_telemetry = StrandsTelemetry()
+    strands_telemetry.setup_otlp_exporter()
+    logger.info("StrandsTelemetry initialized with OTLP exporter")
+except Exception as e:
+    # テレメトリ初期化に失敗してもサーバーは起動を続行
+    logger.warning(f"Failed to initialize StrandsTelemetry: {e}")
 
 # FastAPIアプリケーションの初期化
 app = FastAPI(title="AgentCore Runtime Server", description="Bedrock AgentCore Runtime用HTTPサーバー", version="1.0.0")
