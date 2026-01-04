@@ -9,18 +9,18 @@
 │   S3 Bucket     │────▶│     Lambda      │────▶│ AgentCore       │
 │  (トリガー)      │     │   (Invoker)     │     │  Runtime        │
 └─────────────────┘     └────────┬────────┘     └────────┬────────┘
-                                 │                        │
-                                 │                        ▼
-                                 │              ┌─────────────────┐
-                                 │              │ Strands Agent   │
-                                 │              │ (Docker/ECR)    │
-                                 │              └────────┬────────┘
-                                 │                        │
-                                 ▼                        ▼
-                        ┌─────────────────┐     ┌─────────────────┐
-                        │   S3 Bucket     │     │ AgentCore       │
-                        │  (出力保存)     │     │   Memory        │
-                        └─────────────────┘     └─────────────────┘
+                                │                        │
+                                │                        ▼
+                                │              ┌─────────────────┐
+                                │              │ Strands Agent   │
+                                │              │ (Docker/ECR)    │
+                                │              └────────┬────────┘
+                                │                        │
+                                ▼                        ▼
+                       ┌─────────────────┐     ┌─────────────────┐
+                       │   S3 Bucket     │     │ AgentCore       │
+                       │  (出力保存)     │     │   Memory        │
+                       └─────────────────┘     └─────────────────┘
 ```
 
 ## コンポーネント
@@ -37,9 +37,16 @@ AWSが提供するマネージドエージェントホスティングサービ�
 
 実際のエージェントロジックを実装したコンテナ。
 
-- `app/main.py` - AgentCoreから呼び出される `handler()` 関数
-- `app/agent.py` - Strands frameworkを使用したエージェント設定
-- `app/memory.py` - AgentCore Memory統合設定
+| ファイル | 説明 |
+|---------|------|
+| `app/main.py` | AgentCoreから呼び出される `handler()` 関数 |
+| `app/agent.py` | Strands frameworkを使用したエージェント設定（Claude Sonnet 4.5使用） |
+| `app/config.py` | 設定モジュール（環境変数、バリデーション） |
+| `app/memory.py` | AgentCore Memory統合設定 |
+| `app/tools.py` | カスタムツール（retrieve_memory_tool, save_memory_tool） |
+| `app/workflow.py` | S3ファイル要約ワークフロー（3ステップ処理） |
+| `app/server.py` | FastAPIサーバー（コンテナ内エンドポイント） |
+| `app/prompts/` | プロンプトテンプレート |
 
 ### AgentCore Memory
 
@@ -83,16 +90,28 @@ S3イベントをトリガーにAgentCoreを呼び出すLambda関数。
 ├── app/
 │   ├── main.py          # エントリーポイント（handler関数）
 │   ├── agent.py         # エージェント設定（Claude Sonnet 4.5使用）
+│   ├── config.py        # 設定モジュール（環境変数管理）
 │   ├── memory.py        # AgentCore Memory統合設定
+│   ├── tools.py         # カスタムツール（retrieve/save_memory_tool）
+│   ├── workflow.py      # S3ファイル要約ワークフロー
+│   ├── server.py        # FastAPIサーバー
 │   └── prompts/         # プロンプトテンプレート
+│       └── workflow/
+│           ├── summarize.md  # 要約タスク用
+│           ├── analyze.md    # 分析タスク用
+│           └── profile.md    # プロファイル生成用
 ├── terraform/
 │   ├── agentcore.tf     # AgentCore RuntimeとMemoryリソース
 │   ├── ecr.tf           # ECRリポジトリ
 │   ├── iam.tf           # IAMロールとポリシー
 │   ├── lambda.tf        # Lambda関数（S3トリガー用）
 │   ├── s3.tf            # S3トリガーバケット
+│   ├── observability.tf # ログ・トレース配信設定
+│   ├── locals.tf        # ローカル変数定義
+│   ├── outputs.tf       # Terraform出力
 │   ├── backend.tf       # Terraformステート管理
-│   └── variables.tf     # プロジェクト設定
+│   ├── variables.tf     # プロジェクト設定
+│   └── versions.tf      # Terraformバージョン指定
 ├── lambda/
 │   └── invoker.py       # S3イベントからAgentCoreを呼び出すLambda
 ├── tests/               # テストコード
@@ -133,26 +152,19 @@ S3イベントをトリガーにAgentCoreを呼び出すLambda関数。
 
 ## イベント構造
 
-AgentCoreはエージェントを以下の形式で呼び出します：
+AgentCoreはエージェントを以下の形式で呼び出します（S3ワークフローモードのみサポート）：
 
 ```python
 {
   "input": {
-    "text": "user input here"
-  }
-}
-```
-
-### セッション情報付きイベント
-
-```python
-{
-  "input": {
-    "text": "user input here"
+    "text": "S3ファイルを処理してください"
   },
-  "session_id": "session-123",
-  "memory_id": "memory-456",
-  "actor_id": "user-789"
+  "s3_info": {
+    "bucket": "bucket-name",
+    "key": "path/to/file.txt"
+  },
+  "sessionId": "session-123",
+  "actorId": "user-123"
 }
 ```
 
@@ -164,6 +176,35 @@ AgentCoreはエージェントを以下の形式で呼び出します：
 
 - Memory ID、Session ID、Actor IDを使用
 - Strands frameworkのsession_managerと連携
+
+### Memory利用方法
+
+Memory機能は以下の2つの方法で利用可能です：
+
+#### 1. セッションメモリ（短期記憶）
+
+```python
+from app.memory import create_memory
+session_manager = create_memory(memory_id, session_id, actor_id)
+agent = create_agent(session_manager=session_manager)
+```
+
+#### 2. カスタムツール（長期記憶）
+
+```python
+from app.tools import retrieve_memory_tool, save_memory_tool
+
+# 過去の要約を取得
+records = retrieve_memory_tool(memory_id, actor_id, query="検索クエリ")
+
+# メモリに保存
+record_id = save_memory_tool(
+    namespace="/file-summaries/{actorId}",
+    memory_id=memory_id,
+    actor_id=actor_id,
+    content="保存するコンテンツ"
+)
+```
 
 ### Memory Strategy
 
@@ -202,6 +243,40 @@ AgentCore Memory・Runtimeはログ・トレース配信設定をサポート：
 - **TRACES**: X-Rayへのトレースデータ配信
 
 詳細は `terraform/observability.tf` のObservability設定を参照してください。
+
+## ワークフロー機能
+
+S3ファイルアップロードをトリガーに、3ステップのワークフローを実行します：
+
+### ワークフロー概要
+
+```
+Step 1: S3ファイル読み取り → 要約生成 → メモリ保存
+    ↓
+Step 2: 過去の要約を取得 → パターン分析
+    ↓
+Step 3: ユーザープロファイル生成 → メモリ保存
+```
+
+### 使用例
+
+```python
+from app.workflow import run_workflow
+
+result = run_workflow(
+    s3_info={"bucket": "bucket-name", "key": "path/to/file.txt"},
+    actor_id="user-123",
+    memory_id="agentcore_memory-xxx"
+)
+```
+
+### プロンプトテンプレート
+
+| ファイル | 用途 |
+|---------|------|
+| `app/prompts/workflow/summarize.md` | S3ファイル要約用 |
+| `app/prompts/workflow/analyze.md` | パターン分析用 |
+| `app/prompts/workflow/profile.md` | プロファイル生成用 |
 
 ## ネットワーク設定
 
