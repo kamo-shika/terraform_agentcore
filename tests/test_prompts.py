@@ -4,8 +4,6 @@ app/prompts/loader.py のテスト。
 プロンプト読み込みユーティリティをテストする。
 """
 
-from pathlib import Path
-
 import pytest
 
 
@@ -14,18 +12,25 @@ class TestLoadPrompt:
     load_prompt関数のテスト。
     """
 
-    def test_load_prompt_returns_string(self):
+    def test_load_prompt_returns_string(self, tmp_path, monkeypatch):
         """
         load_promptが文字列を返すことを確認する。
         """
-        from app.prompts import list_prompts, load_prompt
+        from app.prompts import loader
 
-        # 既存のプロンプトがあればテスト
-        available_prompts = list_prompts()
-        if available_prompts:
-            result = load_prompt(available_prompts[0])
-            assert isinstance(result, str)
-            assert len(result) > 0
+        # 一時的なプロンプトファイルを作成
+        test_prompt_content = "This is a test prompt."
+        test_prompt_path = tmp_path / "test_prompt.md"
+        test_prompt_path.write_text(test_prompt_content, encoding="utf-8")
+
+        # PROMPTS_DIRを一時ディレクトリに変更
+        monkeypatch.setattr(loader, "PROMPTS_DIR", tmp_path)
+
+        from app.prompts.loader import load_prompt
+
+        result = load_prompt("test_prompt")
+        assert isinstance(result, str)
+        assert len(result) > 0
 
     def test_load_prompt_file_not_found(self):
         """
@@ -78,91 +83,3 @@ class TestLoadPrompt:
         result = load_prompt("simple")
 
         assert result == test_prompt_content
-
-
-class TestListPrompts:
-    """
-    list_prompts関数のテスト。
-    """
-
-    def test_list_prompts_returns_list(self):
-        """
-        list_promptsがリストを返すことを確認する。
-        """
-        from app.prompts import list_prompts
-
-        result = list_prompts()
-        assert isinstance(result, list)
-
-    def test_list_prompts_returns_markdown_files(self, tmp_path, monkeypatch):
-        """
-        .mdファイルのみがリストされることを確認する。
-        """
-        from app.prompts import loader
-
-        # 一時ディレクトリにテストファイルを作成
-        (tmp_path / "prompt1.md").write_text("Prompt 1", encoding="utf-8")
-        (tmp_path / "prompt2.md").write_text("Prompt 2", encoding="utf-8")
-        (tmp_path / "not_a_prompt.txt").write_text("Not a prompt", encoding="utf-8")
-
-        # PROMPTS_DIRを一時ディレクトリに変更
-        monkeypatch.setattr(loader, "PROMPTS_DIR", tmp_path)
-
-        from app.prompts.loader import list_prompts
-
-        result = list_prompts()
-
-        assert "prompt1" in result
-        assert "prompt2" in result
-        assert "not_a_prompt" not in result
-
-    def test_list_prompts_empty_directory(self, tmp_path, monkeypatch):
-        """
-        空のディレクトリで空のリストを返すことを確認する。
-        """
-        from app.prompts import loader
-
-        # 空の一時ディレクトリ
-        empty_dir = tmp_path / "empty"
-        empty_dir.mkdir()
-
-        monkeypatch.setattr(loader, "PROMPTS_DIR", empty_dir)
-
-        from app.prompts.loader import list_prompts
-
-        result = list_prompts()
-
-        assert result == []
-
-
-class TestGetPromptPath:
-    """
-    get_prompt_path関数のテスト。
-    """
-
-    def test_get_prompt_path_returns_path(self):
-        """
-        get_prompt_pathがPathオブジェクトを返すことを確認する。
-        """
-        from app.prompts import get_prompt_path
-
-        result = get_prompt_path("test_prompt")
-        assert isinstance(result, Path)
-
-    def test_get_prompt_path_has_md_extension(self):
-        """
-        返されるパスが.md拡張子を持つことを確認する。
-        """
-        from app.prompts import get_prompt_path
-
-        result = get_prompt_path("my_prompt")
-        assert result.suffix == ".md"
-
-    def test_get_prompt_path_has_correct_name(self):
-        """
-        返されるパスが正しいファイル名を持つことを確認する。
-        """
-        from app.prompts import get_prompt_path
-
-        result = get_prompt_path("system_prompt")
-        assert result.stem == "system_prompt"

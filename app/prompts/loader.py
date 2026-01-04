@@ -50,24 +50,3 @@ def load_prompt(name: str, **kwargs) -> str:
     return template
 
 
-def list_prompts() -> list[str]:
-    """
-    利用可能なすべてのプロンプト名をリストします。
-
-    Returns:
-        プロンプト名のリスト（.md拡張子なし）
-    """
-    return [f.stem for f in PROMPTS_DIR.glob("*.md")]
-
-
-def get_prompt_path(name: str) -> Path:
-    """
-    プロンプトファイルのフルパスを取得します。
-
-    Args:
-        name: プロンプトファイル名（拡張子なし）
-
-    Returns:
-        プロンプトファイルのPathオブジェクト
-    """
-    return PROMPTS_DIR / f"{name}.md"
