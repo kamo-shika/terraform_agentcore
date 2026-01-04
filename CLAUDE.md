@@ -16,7 +16,13 @@
 ### アプリケーション構造
 - `app/main.py` - AgentCore Runtimeから呼び出される`handler()`関数を持つエントリーポイント
 - `app/agent.py` - Strandsフレームワークを使用したエージェント設定（Claude Sonnet 4.5モデル）
-- `app/memory.py` - AgentCore Memoryの統合設定（現在はmainハンドラに未接続）
+- `app/memory.py` - AgentCore Memoryの統合設定
+- `app/tools.py` - カスタムツール（retrieve_memory_tool, save_memory_tool）
+- `app/workflow.py` - S3ファイル要約ワークフロー（3ステップ処理）
+- `app/prompts/` - プロンプトテンプレート
+  - `workflow/summarize.txt` - S3ファイル要約用
+  - `workflow/analyze.txt` - パターン分析用
+  - `workflow/profile.txt` - プロファイル生成用
 
 ### インフラストラクチャ（Terraform）
 - `terraform/agentcore.tf` - AgentCore RuntimeとMemoryリソース
@@ -28,8 +34,15 @@
 ### アーキテクチャの重要な注意点
 - AgentCore RuntimeはECRからコンテナイメージを取得
 - コンテナはAgentCoreの呼び出しモデルと互換性のあるhandler関数を公開する必要がある
-- Memory統合は`memory.py`に存在するが、現在はmainハンドラでは使用されていない
+- Memory統合は実装済み（S3ワークフローモードで自動的に使用）
 - ネットワークモードはPUBLIC（agentcore.tf:13で設定）
+
+### 処理モード
+1. **通常モード**: ユーザー入力に対してエージェントが直接応答
+2. **S3ワークフローモード**: S3ファイルアップロードをトリガーに3ステップのワークフローを実行
+   - Step 1: S3ファイル読み取り・要約・メモリ保存
+   - Step 2: 過去の要約を取得・パターン分析
+   - Step 3: ユーザープロファイル生成・メモリ保存
 
 ## 開発コマンド
 
@@ -133,18 +146,77 @@ Makefile変数をオーバーライドするか、`terraform/variables.tf`のデ
 `app/agent.py`を編集し、`tools=[]`パラメータにツールを追加します。`strands-agents-tools`パッケージから利用可能です。
 
 ### Memory統合
-`app/memory.py`の`create_memory()`関数は準備できていますが、まだ統合されていません。有効にするには：
-1. `main.py`でインポート
-2. eventからmemory_id、session_id、actor_idを抽出
-3. session_managerをエージェント設定に渡す
+Memory機能は以下の2つの方法で利用可能です：
+
+**1. セッションメモリ（短期記憶）**
+```python
+from app.memory import create_memory
+session_manager = create_memory(memory_id, session_id, actor_id)
+agent = create_agent(session_manager=session_manager)
+```
+
+**2. カスタムツール（長期記憶）**
+```python
+from app.tools import retrieve_memory_tool, save_memory_tool
+
+# 過去の要約を取得
+records = retrieve_memory_tool(memory_id, actor_id, query="検索クエリ")
+
+# メモリに保存
+record_id = save_memory_tool(
+    namespace="/file-summaries/{actorId}",
+    memory_id=memory_id,
+    actor_id=actor_id,
+    content="保存するコンテンツ"
+)
+```
+
+**Namespace設計**:
+- `/file-summaries/{actorId}` - ファイル要約の保存
+- `/actor-state/{actorId}` - ユーザープロファイルの保存
+
+### ワークフロー機能
+S3ファイルアップロードをトリガーに、3ステップのワークフローを実行します：
+
+```python
+from app.workflow import run_workflow
+
+result = run_workflow(
+    s3_info={"bucket": "bucket-name", "key": "path/to/file.txt"},
+    actor_id="user-123",
+    memory_id="agentcore_memory-xxx"
+)
+```
+
+**ワークフロー定義のカスタマイズ**:
+- `app/prompts/workflow/summarize.txt` - 要約タスクのプロンプト
+- `app/prompts/workflow/analyze.txt` - 分析タスクのプロンプト
+- `app/prompts/workflow/profile.txt` - プロファイル生成タスクのプロンプト
 
 ### イベント構造
 AgentCoreは以下の形式のイベントで呼び出します：
+
+**通常モード**:
 ```python
 {
   "input": {
     "text": "user input here"
   }
+}
+```
+
+**S3ワークフローモード**:
+```python
+{
+  "input": {
+    "text": "S3ファイルを処理してください"
+  },
+  "s3_info": {
+    "bucket": "bucket-name",
+    "key": "path/to/file.txt"
+  },
+  "sessionId": "session-123",
+  "actorId": "user-123"
 }
 ```
 
@@ -206,6 +278,12 @@ tests/
 ├── conftest.py              # 共通フィクスチャとpytest設定
 ├── test_main.py             # app/main.pyのテスト
 ├── test_agent.py            # app/agent.pyのテスト
+├── test_memory.py           # app/memory.pyのテスト
+├── test_tools.py            # app/tools.pyのテスト（カスタムツール）
+├── test_workflow.py         # app/workflow.pyのテスト（ワークフロー）
+├── test_config.py           # app/config.pyのテスト
+├── test_prompts.py          # app/prompts/のテスト
+├── test_server.py           # app/server.pyのテスト
 └── fixtures/                # テストデータとヘルパー
     └── __init__.py
 ```

@@ -2,10 +2,18 @@
 
 AWS Bedrock AgentCoreを使用して、コンテナ化されたAIエージェントをAWSにデプロイするためのプロジェクトです。
 
+## 機能
+
+- **AIエージェント**: Claude Sonnet 4.5を使用したマネージドエージェント
+- **S3ワークフロー**: S3ファイルアップロードをトリガーに3ステップのワークフローを自動実行
+  - ファイル要約 → パターン分析 → ユーザープロファイル生成
+- **長期記憶**: AgentCore Memoryによるセマンティック検索可能な長期記憶
+- **カスタムツール**: メモリ操作用のカスタムツール（retrieve/save）
+
 ## 技術スタック
 
 - **Strands Agents framework** - エージェント実装
-- **Bedrock AgentCore** - マネージドエージェントホスティング
+- **Bedrock AgentCore** - マネージドエージェントホスティング（Runtime + Memory）
 - **Terraform** - インフラストラクチャ管理
 - **Docker + ECR** - コンテナイメージ管理
 - **uv** - Python依存関係管理
