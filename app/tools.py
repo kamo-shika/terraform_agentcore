@@ -195,6 +195,7 @@ def save_memory_tool(
         return None
 
 
+@tool
 def save_to_memory_via_event(
     memory_id: str,
     session_id: str,
@@ -274,6 +275,7 @@ def save_to_memory_via_event(
         return None
 
 
+@tool
 def get_past_preferences(memory_id: str, actor_id: str) -> str:
     """
     過去の嗜好・傾向データを取得する。

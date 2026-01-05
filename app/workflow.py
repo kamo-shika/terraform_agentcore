@@ -175,7 +175,8 @@ S3ファイル情報:
 2. 次に、save_memory_toolで要約をメモリに保存してください（namespace: /file-summaries/{actor_id}）
 3. retrieve_memory_toolで過去の要約を取得し、パターンを分析してください
 4. 上記の「ユーザーの過去の嗜好・傾向」を考慮して、ユーザープロファイルを生成してください
-5. 最後に、save_memory_toolでプロファイルを保存してください（namespace: /actor-state/{actor_id}）
+5. save_memory_toolでプロファイルを保存してください（namespace: /actor-state/{actor_id}）
+6. **重要**: 最後に、save_to_memory_via_eventツールを使用して、ファイル内容（user_content）と分析結果（assistant_content）を会話形式で保存してください。これにより、Memory Strategyによる自動嗜好抽出が有効になります。
 
 **重要**: 分析時は過去の嗜好を考慮し、より個別化された分析を行ってください。
 各ステップの結果を報告してください。
