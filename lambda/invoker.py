@@ -98,6 +98,7 @@ def save_response_to_s3(
     Returns:
         保存先のS3 URIまたはNone（保存に失敗した場合）
     """
+    logger.info(f"save_response_to_s3 entered, OUTPUT_BUCKET={OUTPUT_BUCKET}")
     if not OUTPUT_BUCKET:
         logger.warning("OUTPUT_BUCKET is not set, skipping response save")
         return None
@@ -244,9 +245,11 @@ def process_s3_record(record: Dict[str, Any], context: Any) -> Dict[str, Any]:
             session_id=session_id,
             payload=input_payload
         )
+        logger.info(f"invoke_agent_runtime returned, response length: {len(response)}")
 
         # エージェント応答をS3に保存
         input_text = input_payload.get('input', {}).get('text', '')
+        logger.info(f"Calling save_response_to_s3: bucket={bucket_name}, key={object_key}")
         output_uri = save_response_to_s3(
             bucket_name=bucket_name,
             object_key=object_key,
@@ -311,6 +314,7 @@ def invoke_agent_runtime(
         complete_response = process_event_stream(event_stream)
 
         logger.info(f"Agent response: {complete_response[:500]}...")
+        logger.info("About to return from invoke_agent_runtime")
         return complete_response
 
     except ClientError as e:
