@@ -25,7 +25,7 @@ variable "lambda_runtime" {
 variable "lambda_timeout_seconds" {
   description = "Lambda関数のタイムアウト時間（秒）"
   type        = number
-  default     = 300
+  default     = 900
 }
 
 variable "lambda_memory_mb" {
