@@ -83,17 +83,28 @@ Step 3: ユーザープロファイル生成 → メモリ保存
 
 ### テストファイルのアップロード
 
+S3オブジェクトのメタデータで`user-id`を指定すると、そのユーザーのActor IDとして使用されます。
+メタデータが指定されていない場合は`anonymous`が使用されます。
+
 ```bash
 # テストファイルを作成
 echo "これはテストファイルです。内容を要約してください。" > /tmp/test_file.txt
 
 # S3にアップロード（Lambda → AgentCore が起動）
-# Actor IDはファイルパスから抽出（例: daily-reports/tanaka-taro/file.txt → tanaka-taro）
-aws s3 cp /tmp/test_file.txt s3://agentcore-trigger-bucket/daily-reports/test-user/test_file.txt
+# --metadata でユーザーIDを指定（Actor IDとして使用される）
+aws s3 cp /tmp/test_file.txt s3://agentcore-trigger-bucket/daily-reports/test_file.txt \
+    --metadata user-id=tanaka-taro
 
 # アップロード確認
 aws s3 ls s3://agentcore-trigger-bucket/daily-reports/
 ```
+
+#### メタデータの仕様
+
+- AWS CLIの`--metadata`オプションで指定したキーには、S3が自動的に`x-amz-meta-`プレフィックスを付与します
+- 例：`--metadata user-id=xxx` → S3には`x-amz-meta-user-id`として保存
+- Lambda関数（boto3）で取得する際は、プレフィックスなしの`user-id`としてアクセス可能
+- S3コンソールでメタデータを設定する場合は、キー名に`user-id`と入力（プレフィックスは自動付与）
 
 ### Lambda実行ログの確認
 
@@ -397,7 +408,7 @@ aws bedrock-agentcore search-memory \
 | 操作 | コマンド |
 |-----|---------|
 | エージェント直接呼び出し | `aws bedrock-agentcore-runtime invoke-agent-runtime ...` |
-| S3トリガーテスト | `aws s3 cp test.txt s3://agentcore-trigger-bucket/` |
+| S3トリガーテスト | `aws s3 cp test.txt s3://agentcore-trigger-bucket/ --metadata user-id=xxx` |
 | S3出力確認 | `aws s3 ls s3://agentcore-trigger-bucket/outputs/` |
 | Runtime状態確認 | `make get-runtime-info` |
 | バージョン確認 | `make list-versions` |
