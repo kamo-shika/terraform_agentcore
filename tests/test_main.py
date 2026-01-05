@@ -36,10 +36,11 @@ class TestHandler:
             assert "profile" in result["body"]["response"].lower() or "generated" in result["body"]["response"].lower()
 
             # run_workflowが正しいパラメータで呼ばれたか確認
+            # run_workflow(s3_info, actor_id, session_id, memory_id)
             mock_run_workflow.assert_called_once()
             call_args = mock_run_workflow.call_args
             assert call_args[0][0] == sample_s3_event["s3_info"]  # s3_info
-            assert call_args[0][2] == "test-memory-id"  # memory_id
+            assert call_args[0][3] == "test-memory-id"  # memory_id（位置3）
 
     def test_handler_without_s3_info(self, sample_event, mock_context, clean_env):
         """

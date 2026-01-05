@@ -57,6 +57,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         # イベント解析
         parsed = parse_event(event)
         actor_id = parsed["actor_id"]
+        session_id = parsed["session_id"]
         s3_info = parsed["s3_info"]
 
         # メモリID取得
@@ -75,7 +76,7 @@ def handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
             raise ValueError("Memory ID is required for S3 workflow processing")
 
         # ワークフロー実行
-        profile_result = run_workflow(s3_info, actor_id, memory_id)
+        profile_result = run_workflow(s3_info, actor_id, session_id, memory_id)
         logger.info("Workflow completed successfully")
 
         return {"statusCode": 200, "body": {"response": profile_result}}
