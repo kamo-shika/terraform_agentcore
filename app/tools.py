@@ -15,6 +15,8 @@ from botocore.exceptions import ClientError
 from strands.tools import tool
 
 from .config import (
+    ACTOR_STATE_NAMESPACE,
+    ACTOR_STATE_TOP_K,
     LTM_ENABLED,
     LTM_NAMESPACE,
     LTM_SUMMARY_TOP_K,
@@ -191,3 +193,146 @@ def save_memory_tool(
         logger.error(f"Failed to save memory record: {e}")
         # エラー時はNoneを返す
         return None
+
+
+def save_to_memory_via_event(
+    memory_id: str,
+    session_id: str,
+    actor_id: str,
+    user_content: str,
+    assistant_content: str,
+) -> dict[str, Any] | None:
+    """
+    create_event APIを使用してメモリに会話形式で保存する。
+
+    この関数は、batch_create_memory_recordsとは異なり、
+    Memory Strategyによる自動処理（Extraction/Consolidation）を有効にする。
+    これにより、USER_PREFERENCE戦略でユーザーの嗜好が自動抽出される。
+
+    Args:
+        memory_id: AgentCore MemoryのID
+        session_id: セッションID
+        actor_id: アクターID（ユーザーID）
+        user_content: ユーザーメッセージ（ファイル内容など）
+        assistant_content: アシスタントメッセージ（分析結果など）
+
+    Returns:
+        create_event APIのレスポンス、失敗時はNone
+    """
+    # LTMが無効の場合はNoneを返す
+    if not LTM_ENABLED:
+        logger.info("LTM is disabled, skipping save via event")
+        return None
+
+    # memory_idが空の場合はNoneを返す
+    if not memory_id or not memory_id.strip():
+        logger.warning("Empty memory_id, skipping save via event")
+        return None
+
+    # session_idが空の場合はNoneを返す
+    if not session_id or not session_id.strip():
+        logger.warning("Empty session_id, skipping save via event")
+        return None
+
+    # actor_idが空の場合はNoneを返す
+    if not actor_id or not actor_id.strip():
+        logger.warning("Empty actor_id, skipping save via event")
+        return None
+
+    # user_contentが空の場合はNoneを返す
+    if not user_content or not user_content.strip():
+        logger.warning("Empty user_content, skipping save via event")
+        return None
+
+    # assistant_contentが空の場合はNoneを返す
+    if not assistant_content or not assistant_content.strip():
+        logger.warning("Empty assistant_content, skipping save via event")
+        return None
+
+    client = _get_agentcore_client()
+
+    try:
+        response = client.create_event(
+            memoryId=memory_id,
+            sessionId=session_id,
+            actorId=actor_id,
+            event={
+                "conversationEvent": {
+                    "messages": [
+                        {"role": "USER", "content": {"text": user_content}},
+                        {"role": "ASSISTANT", "content": {"text": assistant_content}},
+                    ]
+                }
+            },
+        )
+
+        logger.info(f"Created event for actor={actor_id}, session={session_id}")
+        return response
+
+    except ClientError as e:
+        logger.error(f"Failed to create event: {e}")
+        return None
+
+
+def get_past_preferences(memory_id: str, actor_id: str) -> str:
+    """
+    過去の嗜好・傾向データを取得する。
+
+    /actor-state/{actorId}名前空間から、ユーザーの過去の嗜好や傾向を
+    セマンティック検索で取得する。エージェントが分析時にこのデータを
+    参照することで、より精度の高い分析が可能になる。
+
+    Args:
+        memory_id: AgentCore MemoryのID
+        actor_id: アクターID（ユーザーID）
+
+    Returns:
+        過去の嗜好データをテキストとして結合した文字列。
+        データがない場合やエラー時は空文字列を返す。
+    """
+    # LTMが無効の場合は空文字列を返す
+    if not LTM_ENABLED:
+        logger.info("LTM is disabled, returning empty preferences")
+        return ""
+
+    # memory_idが空の場合は空文字列を返す
+    if not memory_id or not memory_id.strip():
+        logger.warning("Empty memory_id, returning empty preferences")
+        return ""
+
+    # actor_idが空の場合は空文字列を返す
+    if not actor_id or not actor_id.strip():
+        logger.warning("Empty actor_id, returning empty preferences")
+        return ""
+
+    client = _get_agentcore_client()
+    namespace = _resolve_namespace(ACTOR_STATE_NAMESPACE, actor_id)
+
+    try:
+        response = client.retrieve_memory_records(
+            memoryId=memory_id,
+            namespace=namespace,
+            searchCriteria={
+                "searchQuery": "ユーザーの嗜好、好み、傾向、スタイル、preference",
+                "topK": ACTOR_STATE_TOP_K,
+            },
+        )
+
+        records = response.get("memoryRecordSummaries", [])
+        logger.info(f"Retrieved {len(records)} preference records for actor={actor_id}")
+
+        if not records:
+            return ""
+
+        # 嗜好データをテキストとして結合
+        preferences = [
+            record.get("content", {}).get("text", "")
+            for record in records
+            if record.get("content", {}).get("text")
+        ]
+
+        return "\n".join(preferences)
+
+    except ClientError as e:
+        logger.error(f"Failed to retrieve preferences: {e}")
+        return ""

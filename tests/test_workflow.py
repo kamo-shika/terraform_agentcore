@@ -356,10 +356,14 @@ class TestRunWorkflow:
         memory_id = "memory-123"
         actor_id = "user-456"
 
-        # Mock Agent
-        with patch("app.workflow.Agent") as mock_agent_class:
+        # Mock Agent and get_past_preferences
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Workflow completed"
+            mock_get_prefs.return_value = ""
 
             # Act
             run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
@@ -379,8 +383,8 @@ class TestRunWorkflow:
         """
         ワークフローがAgentを正しいツールで作成することを確認。
 
-        Agentにworkflow、use_aws、save_memory_tool、retrieve_memory_toolが
-        渡されることを検証する。
+        Agentにworkflow、use_aws、save_memory_tool、retrieve_memory_tool、
+        save_to_memory_via_eventが渡されることを検証する。
         """
         from app.workflow import run_workflow
 
@@ -389,10 +393,14 @@ class TestRunWorkflow:
         memory_id = "test-memory-id"
         actor_id = "test-actor"
 
-        # Mock Agent
-        with patch("app.workflow.Agent") as mock_agent_class:
+        # Mock Agent and get_past_preferences
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Workflow completed"
+            mock_get_prefs.return_value = ""
 
             # Act
             run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
@@ -404,5 +412,132 @@ class TestRunWorkflow:
             call_kwargs = mock_agent_class.call_args.kwargs
             assert "tools" in call_kwargs
             tools = call_kwargs["tools"]
-            # 4つのツールが渡されることを確認
-            assert len(tools) == 4
+            # 5つのツールが渡されることを確認（save_to_memory_via_event追加）
+            assert len(tools) == 5
+
+    def test_run_workflow_retrieves_past_preferences(self):
+        """
+        ワークフロー実行時に過去の嗜好が取得されることを確認。
+
+        get_past_preferences関数が呼ばれ、過去の嗜好データが
+        エージェントのプロンプトに含まれることを検証する。
+        """
+        from app.workflow import run_workflow
+
+        # Arrange
+        s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
+        memory_id = "test-memory-id"
+        actor_id = "test-actor"
+
+        # Mock Agent and get_past_preferences
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "Workflow completed"
+            mock_get_prefs.return_value = "ユーザーはPythonを好む傾向がある"
+
+            # Act
+            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+
+            # Assert
+            # get_past_preferencesが呼ばれたことを確認
+            mock_get_prefs.assert_called_once_with(
+                memory_id=memory_id, actor_id=actor_id
+            )
+            # プロンプトに過去の嗜好が含まれることを確認
+            prompt_arg = mock_agent_instance.call_args[0][0]
+            assert "過去の嗜好" in prompt_arg or "嗜好" in prompt_arg
+
+    def test_run_workflow_includes_past_preferences_in_prompt(self):
+        """
+        過去の嗜好がエージェントのプロンプトに含まれることを確認。
+
+        取得した嗜好データがプロンプトに埋め込まれ、
+        エージェントが嗜好を考慮した分析を行えることを検証する。
+        """
+        from app.workflow import run_workflow
+
+        # Arrange
+        s3_info = {"bucket": "test-bucket", "key": "data.txt"}
+        memory_id = "memory-123"
+        actor_id = "user-456"
+        past_prefs = "効率重視のコーディングスタイルを好む\nドキュメントを丁寧に書く傾向"
+
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "Analysis complete"
+            mock_get_prefs.return_value = past_prefs
+
+            # Act
+            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+
+            # Assert
+            prompt_arg = mock_agent_instance.call_args[0][0]
+            # 嗜好データがプロンプトに含まれる
+            assert "効率重視" in prompt_arg or past_prefs in prompt_arg
+
+    def test_run_workflow_handles_empty_preferences(self):
+        """
+        過去の嗜好がない場合でもワークフローが正常に動作することを確認。
+
+        初回実行時など嗜好データがない場合でも、
+        エラーなくワークフローが完了することを検証する。
+        """
+        from app.workflow import run_workflow
+
+        # Arrange
+        s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
+        memory_id = "test-memory-id"
+        actor_id = "new-actor"
+
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "First analysis complete"
+            mock_get_prefs.return_value = ""  # 嗜好データなし
+
+            # Act
+            result = run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+
+            # Assert
+            assert result is not None
+            mock_get_prefs.assert_called_once()
+
+    def test_run_workflow_uses_save_to_memory_via_event(self):
+        """
+        ワークフローがsave_to_memory_via_eventを使用することを確認。
+
+        Memory Strategy自動処理を有効にするため、
+        save_to_memory_via_eventがツールとして含まれることを検証する。
+        """
+        from app.workflow import run_workflow
+
+        # Arrange
+        s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
+        memory_id = "test-memory-id"
+        actor_id = "test-actor"
+
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "Workflow completed"
+            mock_get_prefs.return_value = ""
+
+            # Act
+            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+
+            # Assert
+            call_kwargs = mock_agent_class.call_args.kwargs
+            tools = call_kwargs.get("tools", [])
+            # save_to_memory_via_event関数が含まれることを確認
+            tool_names = [getattr(t, "__name__", str(t)) for t in tools]
+            assert any("save_to_memory_via_event" in name for name in tool_names)

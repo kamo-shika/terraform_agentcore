@@ -13,7 +13,12 @@ from strands_tools import use_aws, workflow
 
 from .config import MODEL_ID
 from .prompts import load_prompt
-from .tools import retrieve_memory_tool, save_memory_tool
+from .tools import (
+    get_past_preferences,
+    retrieve_memory_tool,
+    save_memory_tool,
+    save_to_memory_via_event,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -120,12 +125,32 @@ def run_workflow(s3_info: dict[str, str], actor_id: str, memory_id: str) -> str:
     # ワークフロー定義を取得
     workflow_def = create_s3_summarize_workflow()
 
+    # 過去の嗜好を取得（精度向上のため）
+    past_preferences = get_past_preferences(memory_id=memory_id, actor_id=actor_id)
+    logger.info(f"Retrieved past preferences: {len(past_preferences)} chars")
+
+    # 嗜好セクションを構築
+    if past_preferences:
+        preferences_section = f"""
+## ユーザーの過去の嗜好・傾向
+以下は過去の分析から抽出されたユーザーの嗜好データです。
+分析時にこれらの傾向を考慮してください。
+
+{past_preferences}
+"""
+    else:
+        preferences_section = """
+## ユーザーの過去の嗜好・傾向
+過去の嗜好データはありません（初回分析）。
+"""
+
     # ワークフロー用エージェントを作成
     # workflowツールと、各タスクで使用するツールを含める
+    # save_to_memory_via_eventを追加（Memory Strategy自動処理用）
     agent = Agent(
         model=MODEL_ID,
         system_prompt="あなたはワークフローを管理するエージェントです。",
-        tools=[workflow, use_aws, save_memory_tool, retrieve_memory_tool],
+        tools=[workflow, use_aws, save_memory_tool, retrieve_memory_tool, save_to_memory_via_event],
     )
 
     logger.info(f"Creating workflow: {workflow_def['workflow_id']}")
@@ -143,12 +168,16 @@ S3ファイル情報:
 - Memory ID: {memory_id}
 - Actor ID: {actor_id}
 
+{preferences_section}
+
 ワークフロー手順:
 1. まず、use_awsツールでS3からファイルを読み取り、内容を要約してください
 2. 次に、save_memory_toolで要約をメモリに保存してください（namespace: /file-summaries/{actor_id}）
 3. retrieve_memory_toolで過去の要約を取得し、パターンを分析してください
-4. 最後に、ユーザープロファイルを生成し、save_memory_toolで保存してください（namespace: /actor-state/{actor_id}）
+4. 上記の「ユーザーの過去の嗜好・傾向」を考慮して、ユーザープロファイルを生成してください
+5. 最後に、save_memory_toolでプロファイルを保存してください（namespace: /actor-state/{actor_id}）
 
+**重要**: 分析時は過去の嗜好を考慮し、より個別化された分析を行ってください。
 各ステップの結果を報告してください。
 """
 
