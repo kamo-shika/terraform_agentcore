@@ -370,3 +370,380 @@ class TestSaveMemoryTool:
             request_id_2 = calls[1].kwargs["records"][0]["requestIdentifier"]
 
             assert request_id_1 != request_id_2
+
+
+class TestSaveToMemoryViaEvent:
+    """
+    save_to_memory_via_event関数のテスト。
+
+    このツールは、create_event APIを使用してメモリに会話形式で保存し、
+    Memory Strategyによる自動処理（Extraction/Consolidation）を有効にする。
+    """
+
+    def test_save_via_event_with_valid_parameters(self):
+        """
+        正常なパラメータでcreate_eventが呼び出されることを確認する。
+
+        memory_id、session_id、actor_id、user_content、assistant_contentを渡して、
+        create_event APIが正しく呼び出されることを検証する。
+        """
+        from app.tools import save_to_memory_via_event
+
+        # Arrange
+        mock_client = MagicMock()
+        mock_response = {"eventId": "event-001"}
+        mock_client.create_event.return_value = mock_response
+
+        with (
+            patch("app.tools._get_agentcore_client", return_value=mock_client),
+            patch("app.tools.LTM_ENABLED", True),
+        ):
+            # Act
+            result = save_to_memory_via_event(
+                memory_id="test-memory-id",
+                session_id="test-session-id",
+                actor_id="test-actor",
+                user_content="ユーザーからのファイル内容",
+                assistant_content="AIによる分析結果",
+            )
+
+            # Assert
+            assert result == {"eventId": "event-001"}
+            mock_client.create_event.assert_called_once()
+
+    def test_save_via_event_creates_correct_message_structure(self):
+        """
+        create_event呼び出し時に正しいメッセージ構造が使用されることを確認する。
+
+        USER役割とASSISTANT役割の2つのメッセージが正しい順序と形式で
+        渡されることを検証する。
+        """
+        from app.tools import save_to_memory_via_event
+
+        # Arrange
+        mock_client = MagicMock()
+        mock_response = {"eventId": "event-001"}
+        mock_client.create_event.return_value = mock_response
+
+        with (
+            patch("app.tools._get_agentcore_client", return_value=mock_client),
+            patch("app.tools.LTM_ENABLED", True),
+        ):
+            # Act
+            save_to_memory_via_event(
+                memory_id="test-memory-id",
+                session_id="session-123",
+                actor_id="actor-456",
+                user_content="ファイル内容です",
+                assistant_content="分析結果です",
+            )
+
+            # Assert
+            call_kwargs = mock_client.create_event.call_args.kwargs
+            assert call_kwargs["memoryId"] == "test-memory-id"
+            assert call_kwargs["sessionId"] == "session-123"
+            assert call_kwargs["actorId"] == "actor-456"
+
+            # メッセージ構造の検証
+            event = call_kwargs["event"]
+            assert "conversationEvent" in event
+            messages = event["conversationEvent"]["messages"]
+            assert len(messages) == 2
+            assert messages[0]["role"] == "USER"
+            assert messages[0]["content"]["text"] == "ファイル内容です"
+            assert messages[1]["role"] == "ASSISTANT"
+            assert messages[1]["content"]["text"] == "分析結果です"
+
+    def test_save_via_event_when_ltm_disabled_returns_none(self):
+        """
+        LTM_ENABLEDがFalseの場合はNoneを返すことを確認する。
+
+        LTM機能が無効化されている場合、create_eventを実行せず
+        Noneを返すことを検証する。
+        """
+        from app.tools import save_to_memory_via_event
+
+        # Arrange
+        with patch("app.tools.LTM_ENABLED", False):
+            # Act
+            result = save_to_memory_via_event(
+                memory_id="test-memory-id",
+                session_id="test-session",
+                actor_id="test-actor",
+                user_content="ユーザーコンテンツ",
+                assistant_content="アシスタントコンテンツ",
+            )
+
+            # Assert
+            assert result is None
+
+    def test_save_via_event_with_empty_memory_id_returns_none(self):
+        """
+        memory_idが空の場合はNoneを返すことを確認する。
+        """
+        from app.tools import save_to_memory_via_event
+
+        # Arrange
+        with patch("app.tools.LTM_ENABLED", True):
+            # Act
+            result = save_to_memory_via_event(
+                memory_id="",
+                session_id="test-session",
+                actor_id="test-actor",
+                user_content="ユーザーコンテンツ",
+                assistant_content="アシスタントコンテンツ",
+            )
+
+            # Assert
+            assert result is None
+
+    def test_save_via_event_with_empty_user_content_returns_none(self):
+        """
+        user_contentが空の場合はNoneを返すことを確認する。
+        """
+        from app.tools import save_to_memory_via_event
+
+        # Arrange
+        with patch("app.tools.LTM_ENABLED", True):
+            # Act
+            result = save_to_memory_via_event(
+                memory_id="test-memory-id",
+                session_id="test-session",
+                actor_id="test-actor",
+                user_content="",
+                assistant_content="アシスタントコンテンツ",
+            )
+
+            # Assert
+            assert result is None
+
+    def test_save_via_event_with_empty_assistant_content_returns_none(self):
+        """
+        assistant_contentが空の場合はNoneを返すことを確認する。
+        """
+        from app.tools import save_to_memory_via_event
+
+        # Arrange
+        with patch("app.tools.LTM_ENABLED", True):
+            # Act
+            result = save_to_memory_via_event(
+                memory_id="test-memory-id",
+                session_id="test-session",
+                actor_id="test-actor",
+                user_content="ユーザーコンテンツ",
+                assistant_content="",
+            )
+
+            # Assert
+            assert result is None
+
+    def test_save_via_event_handles_client_error(self):
+        """
+        AWS APIエラー時にNoneを返すことを確認する。
+        """
+        from botocore.exceptions import ClientError
+
+        from app.tools import save_to_memory_via_event
+
+        # Arrange
+        mock_client = MagicMock()
+        mock_client.create_event.side_effect = ClientError(
+            {"Error": {"Code": "ValidationException", "Message": "Invalid request"}},
+            "CreateEvent",
+        )
+
+        with (
+            patch("app.tools._get_agentcore_client", return_value=mock_client),
+            patch("app.tools.LTM_ENABLED", True),
+        ):
+            # Act
+            result = save_to_memory_via_event(
+                memory_id="test-memory-id",
+                session_id="test-session",
+                actor_id="test-actor",
+                user_content="ユーザーコンテンツ",
+                assistant_content="アシスタントコンテンツ",
+            )
+
+            # Assert
+            assert result is None
+
+
+class TestGetPastPreferences:
+    """
+    get_past_preferences関数のテスト。
+
+    このツールは、過去の嗜好データを/actor-state/{actorId}から取得し、
+    エージェントが分析時に参照できるようにする。
+    """
+
+    def test_get_past_preferences_with_valid_parameters(self):
+        """
+        正常なパラメータで過去の嗜好を取得できることを確認する。
+        """
+        from app.tools import get_past_preferences
+
+        # Arrange
+        mock_client = MagicMock()
+        mock_response = {
+            "memoryRecordSummaries": [
+                {
+                    "memoryRecordId": "pref-001",
+                    "content": {"text": "ユーザーはPythonを好む傾向がある"},
+                    "relevanceScore": 0.9,
+                },
+                {
+                    "memoryRecordId": "pref-002",
+                    "content": {"text": "効率を重視する傾向がある"},
+                    "relevanceScore": 0.85,
+                },
+            ]
+        }
+        mock_client.retrieve_memory_records.return_value = mock_response
+
+        with (
+            patch("app.tools._get_agentcore_client", return_value=mock_client),
+            patch("app.tools.LTM_ENABLED", True),
+        ):
+            # Act
+            result = get_past_preferences(memory_id="test-memory-id", actor_id="test-actor")
+
+            # Assert
+            assert "Pythonを好む" in result
+            assert "効率を重視" in result
+
+    def test_get_past_preferences_uses_actor_state_namespace(self):
+        """
+        /actor-state/{actorId}名前空間を使用することを確認する。
+        """
+        from app.tools import get_past_preferences
+
+        # Arrange
+        mock_client = MagicMock()
+        mock_response = {"memoryRecordSummaries": []}
+        mock_client.retrieve_memory_records.return_value = mock_response
+
+        with (
+            patch("app.tools._get_agentcore_client", return_value=mock_client),
+            patch("app.tools.LTM_ENABLED", True),
+        ):
+            # Act
+            get_past_preferences(memory_id="test-memory-id", actor_id="user-123")
+
+            # Assert
+            call_kwargs = mock_client.retrieve_memory_records.call_args.kwargs
+            assert call_kwargs["namespace"] == "/actor-state/user-123"
+
+    def test_get_past_preferences_returns_empty_string_when_no_data(self):
+        """
+        過去の嗜好がない場合は空文字列を返すことを確認する。
+        """
+        from app.tools import get_past_preferences
+
+        # Arrange
+        mock_client = MagicMock()
+        mock_response = {"memoryRecordSummaries": []}
+        mock_client.retrieve_memory_records.return_value = mock_response
+
+        with (
+            patch("app.tools._get_agentcore_client", return_value=mock_client),
+            patch("app.tools.LTM_ENABLED", True),
+        ):
+            # Act
+            result = get_past_preferences(memory_id="test-memory-id", actor_id="test-actor")
+
+            # Assert
+            assert result == ""
+
+    def test_get_past_preferences_when_ltm_disabled_returns_empty_string(self):
+        """
+        LTM_ENABLEDがFalseの場合は空文字列を返すことを確認する。
+        """
+        from app.tools import get_past_preferences
+
+        # Arrange
+        with patch("app.tools.LTM_ENABLED", False):
+            # Act
+            result = get_past_preferences(memory_id="test-memory-id", actor_id="test-actor")
+
+            # Assert
+            assert result == ""
+
+    def test_get_past_preferences_with_empty_memory_id_returns_empty_string(self):
+        """
+        memory_idが空の場合は空文字列を返すことを確認する。
+        """
+        from app.tools import get_past_preferences
+
+        # Arrange
+        with patch("app.tools.LTM_ENABLED", True):
+            # Act
+            result = get_past_preferences(memory_id="", actor_id="test-actor")
+
+            # Assert
+            assert result == ""
+
+    def test_get_past_preferences_with_empty_actor_id_returns_empty_string(self):
+        """
+        actor_idが空の場合は空文字列を返すことを確認する。
+        """
+        from app.tools import get_past_preferences
+
+        # Arrange
+        with patch("app.tools.LTM_ENABLED", True):
+            # Act
+            result = get_past_preferences(memory_id="test-memory-id", actor_id="")
+
+            # Assert
+            assert result == ""
+
+    def test_get_past_preferences_handles_client_error(self):
+        """
+        AWS APIエラー時に空文字列を返すことを確認する。
+        """
+        from botocore.exceptions import ClientError
+
+        from app.tools import get_past_preferences
+
+        # Arrange
+        mock_client = MagicMock()
+        mock_client.retrieve_memory_records.side_effect = ClientError(
+            {"Error": {"Code": "ResourceNotFoundException", "Message": "Memory not found"}},
+            "RetrieveMemoryRecords",
+        )
+
+        with (
+            patch("app.tools._get_agentcore_client", return_value=mock_client),
+            patch("app.tools.LTM_ENABLED", True),
+        ):
+            # Act
+            result = get_past_preferences(memory_id="test-memory-id", actor_id="test-actor")
+
+            # Assert
+            assert result == ""
+
+    def test_get_past_preferences_uses_correct_search_query(self):
+        """
+        嗜好検索に適切なクエリを使用することを確認する。
+        """
+        from app.tools import get_past_preferences
+
+        # Arrange
+        mock_client = MagicMock()
+        mock_response = {"memoryRecordSummaries": []}
+        mock_client.retrieve_memory_records.return_value = mock_response
+
+        with (
+            patch("app.tools._get_agentcore_client", return_value=mock_client),
+            patch("app.tools.LTM_ENABLED", True),
+        ):
+            # Act
+            get_past_preferences(memory_id="test-memory-id", actor_id="test-actor")
+
+            # Assert
+            call_kwargs = mock_client.retrieve_memory_records.call_args.kwargs
+            search_criteria = call_kwargs["searchCriteria"]
+            # 嗜好に関連するクエリが使用されることを確認
+            assert "searchQuery" in search_criteria
+            query = search_criteria["searchQuery"]
+            assert "嗜好" in query or "傾向" in query or "好み" in query or "preference" in query.lower()
