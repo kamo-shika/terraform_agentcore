@@ -91,7 +91,7 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
     }
 
 
-def run_workflow(s3_info: dict[str, str], actor_id: str, memory_id: str) -> str:
+def run_workflow(s3_info: dict[str, str], actor_id: str, session_id: str, memory_id: str) -> str:
     """
     S3ファイル要約ワークフローを実行する。
 
@@ -100,6 +100,7 @@ def run_workflow(s3_info: dict[str, str], actor_id: str, memory_id: str) -> str:
             - bucket: S3バケット名
             - key: S3オブジェクトキー
         actor_id: アクターID（ユーザーID）
+        session_id: セッションID
         memory_id: AgentCore MemoryのID
 
     Returns:
@@ -166,6 +167,7 @@ S3ファイル情報:
 
 メモリ情報:
 - Memory ID: {memory_id}
+- Session ID: {session_id}
 - Actor ID: {actor_id}
 
 {preferences_section}
@@ -175,7 +177,14 @@ S3ファイル情報:
 2. 次に、save_memory_toolで要約をメモリに保存してください（namespace: /file-summaries/{actor_id}）
 3. retrieve_memory_toolで過去の要約を取得し、パターンを分析してください
 4. 上記の「ユーザーの過去の嗜好・傾向」を考慮して、ユーザープロファイルを生成してください
-5. 最後に、save_memory_toolでプロファイルを保存してください（namespace: /actor-state/{actor_id}）
+5. save_memory_toolでプロファイルを保存してください（namespace: /actor-state/{actor_id}）
+6. **重要**: 最後に、save_to_memory_via_eventツールを以下のパラメータで呼び出してください:
+   - memory_id: {memory_id}
+   - session_id: {session_id}
+   - actor_id: {actor_id}
+   - user_content: ファイルの内容
+   - assistant_content: 分析結果・プロファイル
+   これにより、Memory Strategyによる自動嗜好抽出が有効になります。
 
 **重要**: 分析時は過去の嗜好を考慮し、より個別化された分析を行ってください。
 各ステップの結果を報告してください。

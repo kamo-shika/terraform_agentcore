@@ -252,6 +252,7 @@ class TestRunWorkflow:
         s3_info = {"bucket": "test-bucket", "key": "test-folder/test-file.txt"}
         memory_id = "test-memory-id"
         actor_id = "test-actor"
+        session_id = "test-session"
 
         # Mock the Agent
         with patch("app.workflow.Agent") as mock_agent_class:
@@ -259,7 +260,7 @@ class TestRunWorkflow:
             mock_agent_instance.return_value = "Workflow completed successfully"
 
             # Act
-            result = run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            result = run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
             # Agentが呼ばれたことを確認
@@ -277,10 +278,11 @@ class TestRunWorkflow:
         # Arrange
         memory_id = "test-memory-id"
         actor_id = "test-actor"
+        session_id = "test-session"
 
         # Act & Assert
         with pytest.raises(ValueError, match="s3_info"):
-            run_workflow(s3_info=None, memory_id=memory_id, actor_id=actor_id)
+            run_workflow(s3_info=None, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
     def test_run_workflow_with_empty_bucket_raises_error(self):
         """
@@ -294,10 +296,11 @@ class TestRunWorkflow:
         s3_info = {"bucket": "", "key": "test-file.txt"}
         memory_id = "test-memory-id"
         actor_id = "test-actor"
+        session_id = "test-session"
 
         # Act & Assert
         with pytest.raises(ValueError, match="bucket"):
-            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
     def test_run_workflow_with_empty_key_raises_error(self):
         """
@@ -311,10 +314,11 @@ class TestRunWorkflow:
         s3_info = {"bucket": "test-bucket", "key": ""}
         memory_id = "test-memory-id"
         actor_id = "test-actor"
+        session_id = "test-session"
 
         # Act & Assert
         with pytest.raises(ValueError, match="key"):
-            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
     def test_run_workflow_returns_profile(self):
         """
@@ -329,6 +333,7 @@ class TestRunWorkflow:
         s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
         memory_id = "test-memory-id"
         actor_id = "test-actor"
+        session_id = "test-session"
 
         # Mock Agent
         with patch("app.workflow.Agent") as mock_agent_class:
@@ -336,7 +341,7 @@ class TestRunWorkflow:
             mock_agent_instance.return_value = "User profile: Technical user with data analysis focus"
 
             # Act
-            result = run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            result = run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
             assert result is not None
@@ -346,7 +351,7 @@ class TestRunWorkflow:
         """
         ワークフロー作成時に正しいパラメータが渡されることを確認。
 
-        S3情報、memory_id、actor_idがAgentのプロンプトに
+        S3情報、memory_id、actor_id、session_idがAgentのプロンプトに
         適切に埋め込まれることを検証する。
         """
         from app.workflow import run_workflow
@@ -355,6 +360,7 @@ class TestRunWorkflow:
         s3_info = {"bucket": "test-bucket", "key": "data/file.txt"}
         memory_id = "memory-123"
         actor_id = "user-456"
+        session_id = "session-789"
 
         # Mock Agent and get_past_preferences
         with (
@@ -366,7 +372,7 @@ class TestRunWorkflow:
             mock_get_prefs.return_value = ""
 
             # Act
-            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
             # Agentが正しいツールで作成されたことを確認
@@ -378,6 +384,7 @@ class TestRunWorkflow:
             assert "data/file.txt" in prompt_arg
             assert memory_id in prompt_arg
             assert actor_id in prompt_arg
+            assert session_id in prompt_arg
 
     def test_run_workflow_uses_agent_with_correct_tools(self):
         """
@@ -392,6 +399,7 @@ class TestRunWorkflow:
         s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
         memory_id = "test-memory-id"
         actor_id = "test-actor"
+        session_id = "test-session"
 
         # Mock Agent and get_past_preferences
         with (
@@ -403,7 +411,7 @@ class TestRunWorkflow:
             mock_get_prefs.return_value = ""
 
             # Act
-            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
             # Agentが作成されたことを確認
@@ -428,6 +436,7 @@ class TestRunWorkflow:
         s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
         memory_id = "test-memory-id"
         actor_id = "test-actor"
+        session_id = "test-session"
 
         # Mock Agent and get_past_preferences
         with (
@@ -439,7 +448,7 @@ class TestRunWorkflow:
             mock_get_prefs.return_value = "ユーザーはPythonを好む傾向がある"
 
             # Act
-            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
             # get_past_preferencesが呼ばれたことを確認
@@ -463,6 +472,7 @@ class TestRunWorkflow:
         s3_info = {"bucket": "test-bucket", "key": "data.txt"}
         memory_id = "memory-123"
         actor_id = "user-456"
+        session_id = "session-789"
         past_prefs = "効率重視のコーディングスタイルを好む\nドキュメントを丁寧に書く傾向"
 
         with (
@@ -474,7 +484,7 @@ class TestRunWorkflow:
             mock_get_prefs.return_value = past_prefs
 
             # Act
-            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
             prompt_arg = mock_agent_instance.call_args[0][0]
@@ -494,6 +504,7 @@ class TestRunWorkflow:
         s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
         memory_id = "test-memory-id"
         actor_id = "new-actor"
+        session_id = "test-session"
 
         with (
             patch("app.workflow.Agent") as mock_agent_class,
@@ -504,7 +515,7 @@ class TestRunWorkflow:
             mock_get_prefs.return_value = ""  # 嗜好データなし
 
             # Act
-            result = run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            result = run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
             assert result is not None
@@ -523,6 +534,7 @@ class TestRunWorkflow:
         s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
         memory_id = "test-memory-id"
         actor_id = "test-actor"
+        session_id = "test-session"
 
         with (
             patch("app.workflow.Agent") as mock_agent_class,
@@ -533,7 +545,7 @@ class TestRunWorkflow:
             mock_get_prefs.return_value = ""
 
             # Act
-            run_workflow(s3_info=s3_info, memory_id=memory_id, actor_id=actor_id)
+            run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
             call_kwargs = mock_agent_class.call_args.kwargs
