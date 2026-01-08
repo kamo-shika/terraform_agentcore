@@ -3,6 +3,9 @@ REGION = ap-northeast-1
 REPO_NAME = $(PROJECT_NAME)-repo
 TF_DIR = terraform
 
+# AWS CLIのデフォルトリージョンを設定（--region指定を省略可能に）
+export AWS_DEFAULT_REGION = $(REGION)
+
 # AWS Account ID and ECR URL retrieval
 ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
 ECR_URL = $(ACCOUNT_ID).dkr.ecr.$(REGION).amazonaws.com
@@ -14,6 +17,22 @@ GIT_COMMIT_FULL = $(shell git rev-parse HEAD)
 # Image URIs with version tags
 IMAGE_URI_LATEST = $(ECR_URL)/$(REPO_NAME):latest
 IMAGE_URI_VERSIONED = $(ECR_URL)/$(REPO_NAME):$(GIT_COMMIT)
+
+# Terraform共通設定
+TF_CMD = cd $(TF_DIR) && terraform
+TF_VARS = -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)" -var="image_tag=$(GIT_COMMIT)"
+
+# AgentCore Runtime ID/Memory IDを取得（Dockerビルド時に注入）
+RUNTIME_ID = $(shell $(TF_CMD) output -raw runtime_id 2>/dev/null)
+MEMORY_ID = $(shell $(TF_CMD) output -raw memory_id 2>/dev/null)
+
+# RUNTIME_IDチェックマクロ
+define check_runtime_id
+	@if [ -z "$(RUNTIME_ID)" ]; then \
+		echo "Error: Could not get Runtime ID. Run 'make apply' first."; \
+		exit 1; \
+	fi
+endef
 
 .PHONY: init plan apply destroy login build push deploy deploy-init setup test test-cov ci-test update-endpoint get-runtime-info list-versions list-endpoints rollback lint format validate-tf clean help
 
@@ -88,23 +107,23 @@ ci-test:
 
 # --- Terraform ---
 init:
-	cd $(TF_DIR) && terraform init
+	$(TF_CMD) init
 
 plan:
-	cd $(TF_DIR) && terraform plan -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)" -var="image_tag=$(GIT_COMMIT)"
+	$(TF_CMD) plan $(TF_VARS)
 
 apply:
-	cd $(TF_DIR) && terraform apply -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)" -var="image_tag=$(GIT_COMMIT)"
+	$(TF_CMD) apply -auto-approve $(TF_VARS)
 
 destroy:
-	cd $(TF_DIR) && terraform destroy -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)" -var="image_tag=$(GIT_COMMIT)"
+	$(TF_CMD) destroy $(TF_VARS)
 
 validate-tf:
-	cd $(TF_DIR) && terraform validate
+	$(TF_CMD) validate
 
 # --- Docker / ECR ---
 login:
-	aws ecr get-login-password --region $(REGION) | docker login --username AWS --password-stdin $(ECR_URL)
+	aws ecr get-login-password | docker login --username AWS --password-stdin $(ECR_URL)
 
 # Dockerイメージをビルド（Memory IDを環境変数として注入）
 # 注意: MEMORY_IDが取得できない場合はビルドを中止する（壊れたイメージのデプロイを防止）
@@ -142,75 +161,49 @@ deploy: push apply
 
 # Initial deployment: Create ECR -> Push Image -> Create Agent
 deploy-init:
-	cd $(TF_DIR) && terraform apply -target=aws_ecr_repository.main -var="project_name=$(PROJECT_NAME)" -var="region=$(REGION)" -var="image_tag=$(GIT_COMMIT)"
+	$(TF_CMD) apply -target=aws_ecr_repository.main $(TF_VARS)
 	$(MAKE) push
 	$(MAKE) apply
 
 # --- AgentCore Endpoint Management ---
-# AgentCore Runtime IDを取得
-RUNTIME_ID = $(shell cd $(TF_DIR) && terraform output -raw runtime_id 2>/dev/null)
-
-# AgentCore Memory IDを取得（Dockerビルド時に注入）
-MEMORY_ID = $(shell cd $(TF_DIR) && terraform output -raw memory_id 2>/dev/null)
-
 # DEFAULTエンドポイントを最新バージョンに更新
 update-endpoint:
-	@if [ -z "$(RUNTIME_ID)" ]; then \
-		echo "Error: Could not get Runtime ID. Run 'make apply' first."; \
-		exit 1; \
-	fi
+	$(check_runtime_id)
 	@echo "Updating AgentCore Runtime endpoint to latest version..."
 	aws bedrock-agentcore-control update-agent-runtime-endpoint \
 		--agent-runtime-id $(RUNTIME_ID) \
-		--endpoint-name DEFAULT \
-		--region $(REGION)
+		--endpoint-name DEFAULT
 	@echo "Endpoint update initiated. Use 'make get-runtime-info' to check status."
 
 # Runtime情報を表示
 get-runtime-info:
-	@if [ -z "$(RUNTIME_ID)" ]; then \
-		echo "Error: Could not get Runtime ID. Run 'make apply' first."; \
-		exit 1; \
-	fi
+	$(check_runtime_id)
 	@echo "=== AgentCore Runtime Info ==="
 	aws bedrock-agentcore-control get-agent-runtime \
-		--agent-runtime-id $(RUNTIME_ID) \
-		--region $(REGION)
+		--agent-runtime-id $(RUNTIME_ID)
 	@echo ""
 	@echo "=== AgentCore Runtime Endpoints ==="
 	aws bedrock-agentcore-control list-agent-runtime-endpoints \
-		--agent-runtime-id $(RUNTIME_ID) \
-		--region $(REGION)
+		--agent-runtime-id $(RUNTIME_ID)
 
 # Runtimeの全バージョン一覧を表示
 list-versions:
-	@if [ -z "$(RUNTIME_ID)" ]; then \
-		echo "Error: Could not get Runtime ID. Run 'make apply' first."; \
-		exit 1; \
-	fi
+	$(check_runtime_id)
 	@echo "=== AgentCore Runtime Versions ==="
 	aws bedrock-agentcore-control list-agent-runtime-versions \
-		--agent-runtime-id $(RUNTIME_ID) \
-		--region $(REGION)
+		--agent-runtime-id $(RUNTIME_ID)
 
 # 全エンドポイント一覧を表示
 list-endpoints:
-	@if [ -z "$(RUNTIME_ID)" ]; then \
-		echo "Error: Could not get Runtime ID. Run 'make apply' first."; \
-		exit 1; \
-	fi
+	$(check_runtime_id)
 	@echo "=== AgentCore Runtime Endpoints ==="
 	aws bedrock-agentcore-control list-agent-runtime-endpoints \
-		--agent-runtime-id $(RUNTIME_ID) \
-		--region $(REGION)
+		--agent-runtime-id $(RUNTIME_ID)
 
 # PRODエンドポイントを指定バージョンにロールバック
 # 使用法: make rollback VERSION=V1
 rollback:
-	@if [ -z "$(RUNTIME_ID)" ]; then \
-		echo "Error: Could not get Runtime ID. Run 'make apply' first."; \
-		exit 1; \
-	fi
+	$(check_runtime_id)
 	@if [ -z "$(VERSION)" ]; then \
 		echo "Error: VERSION is required. Usage: make rollback VERSION=V1"; \
 		exit 1; \
@@ -219,6 +212,5 @@ rollback:
 	aws bedrock-agentcore-control update-agent-runtime-endpoint \
 		--agent-runtime-id $(RUNTIME_ID) \
 		--endpoint-name PROD \
-		--agent-runtime-version $(VERSION) \
-		--region $(REGION)
+		--agent-runtime-version $(VERSION)
 	@echo "Rollback initiated. Use 'make list-endpoints' to check status."
