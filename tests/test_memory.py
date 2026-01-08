@@ -15,21 +15,30 @@ class TestCreateRetrievalConfig:
     def test_returns_config_when_ltm_enabled(self):
         """
         LTM有効時にRetrievalConfigが返されることを確認する。
+
+        SessionManager統合後、複数のNamespaceを含むRetrievalConfigが
+        返されることを検証する。
         """
         with (
             patch("app.memory.LTM_ENABLED", True),
             patch("app.memory.LTM_SUMMARY_TOP_K", 10),
             patch("app.memory.LTM_SUMMARY_SCORE", 0.3),
             patch("app.memory.LTM_NAMESPACE", "/file-summaries/{actorId}"),
+            patch("app.memory.ACTOR_STATE_NAMESPACE", "/actor-state/{actorId}"),
+            patch("app.memory.ACTOR_STATE_TOP_K", 5),
         ):
             from app.memory import create_retrieval_config
 
             result = create_retrieval_config()
 
             assert result is not None
+            # ファイル要約のNamespaceを含む
             assert "/file-summaries/{actorId}" in result
             assert result["/file-summaries/{actorId}"]["top_k"] == 10
             assert result["/file-summaries/{actorId}"]["relevance_score"] == 0.3
+            # Actor状態のNamespaceも含む
+            assert "/actor-state/{actorId}" in result
+            assert result["/actor-state/{actorId}"]["top_k"] == 5
 
     def test_returns_none_when_ltm_disabled(self):
         """
