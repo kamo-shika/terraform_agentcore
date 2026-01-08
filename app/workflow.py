@@ -3,21 +3,23 @@ Strands Agents workflowツールを使用したワークフロー管理。
 
 このモジュールは、S3ファイルの要約とユーザープロファイル生成のための
 ワークフローを定義・実行する機能を提供する。
+
+SessionManager統合により、会話履歴は自動的に永続化され、
+Memory Strategyによる自動処理（嗜好抽出・要約等）が有効になる。
 """
 
 import logging
 from typing import Any
 
 from strands import Agent
-from strands_tools import use_aws, workflow
+from strands_tools import use_aws
 
 from .config import MODEL_ID
+from .memory import create_memory
 from .prompts import load_prompt
 from .tools import (
     get_past_preferences,
     retrieve_memory_tool,
-    save_memory_tool,
-    save_to_memory_via_event,
 )
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
         - tasks: タスク定義のリスト
     """
     # プロンプトファイルから読み込む（見つからない場合はデフォルト値を使用）
+    # SessionManager統合により、保存は自動的に行われる
     try:
         summarize_prompt = load_prompt("workflow/summarize")
     except FileNotFoundError:
@@ -40,7 +43,7 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
         summarize_prompt = (
             "あなたはS3ファイルを読み取り、内容を要約するエージェントです。\n"
             "use_awsツールを使用してS3ファイルの内容を取得し、\n"
-            "その内容を要約してsave_memory_toolで保存してください。"
+            "その内容を要約してください。会話履歴は自動的に保存されます。"
         )
 
     try:
@@ -59,18 +62,20 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
         logger.warning("workflow/profile.md not found, using default prompt")
         profile_prompt = (
             "あなたはユーザープロファイルを生成するエージェントです。\n"
-            "分析結果に基づいてユーザーの特性や傾向をまとめ、\n"
-            "save_memory_toolを使用してプロファイルを保存してください。"
+            "分析結果に基づいてユーザーの特性や傾向をまとめてください。\n"
+            "会話履歴は自動的に保存され、Memory Strategyにより嗜好が抽出されます。"
         )
 
+    # SessionManager統合後、save_memory_toolは不要
+    # 保存はSessionManagerが自動的に行い、Memory Strategyで嗜好抽出される
     return {
         "workflow_id": "s3_summarize",
         "tasks": [
             {
                 "task_id": "summarize_s3_file",
-                "description": "S3ファイルを読み取り、内容を要約してメモリに保存",
+                "description": "S3ファイルを読み取り、内容を要約",
                 "system_prompt": summarize_prompt,
-                "tools": ["use_aws", "save_memory_tool"],
+                "tools": ["use_aws"],  # SessionManagerが自動保存
                 "dependencies": [],
             },
             {
@@ -82,9 +87,9 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
             },
             {
                 "task_id": "generate_profile",
-                "description": "ユーザー特性をまとめてプロファイルを生成し保存",
+                "description": "ユーザー特性をまとめてプロファイルを生成",
                 "system_prompt": profile_prompt,
-                "tools": ["save_memory_tool"],
+                "tools": [],  # SessionManagerが自動保存
                 "dependencies": ["analyze_patterns"],
             },
         ],
@@ -145,19 +150,23 @@ def run_workflow(s3_info: dict[str, str], actor_id: str, session_id: str, memory
 過去の嗜好データはありません（初回分析）。
 """
 
+    # SessionManagerを作成（会話履歴の自動永続化 + LTMからの情報自動取得）
+    session_manager = create_memory(memory_id, session_id, actor_id)
+
     # ワークフロー用エージェントを作成
-    # workflowツールと、各タスクで使用するツールを含める
-    # save_to_memory_via_eventを追加（Memory Strategy自動処理用）
+    # SessionManager統合により、保存系ツールは不要
+    # 会話履歴は自動的に永続化され、Memory Strategyにより嗜好抽出される
     agent = Agent(
         model=MODEL_ID,
         system_prompt="あなたはワークフローを管理するエージェントです。",
-        tools=[workflow, use_aws, save_memory_tool, retrieve_memory_tool, save_to_memory_via_event],
+        tools=[use_aws, retrieve_memory_tool, get_past_preferences],
+        session_manager=session_manager,  # SessionManagerを渡す
     )
 
     logger.info(f"Creating workflow: {workflow_def['workflow_id']}")
 
     # ワークフローを作成・実行
-    # agent経由でworkflowツールを使用
+    # SessionManagerにより会話は自動保存され、Memory Strategyで嗜好抽出
     prompt = f"""
 以下のワークフローを実行してください。
 
@@ -174,20 +183,14 @@ S3ファイル情報:
 
 ワークフロー手順:
 1. まず、use_awsツールでS3からファイルを読み取り、内容を要約してください
-2. 次に、save_memory_toolで要約をメモリに保存してください（namespace: /file-summaries/{actor_id}）
-3. retrieve_memory_toolで過去の要約を取得し、パターンを分析してください
-4. 上記の「ユーザーの過去の嗜好・傾向」を考慮して、ユーザープロファイルを生成してください
-5. save_memory_toolでプロファイルを保存してください（namespace: /actor-state/{actor_id}）
-6. **重要**: 最後に、save_to_memory_via_eventツールを以下のパラメータで呼び出してください:
-   - memory_id: {memory_id}
-   - session_id: {session_id}
-   - actor_id: {actor_id}
-   - user_content: ファイルの内容
-   - assistant_content: 分析結果・プロファイル
-   これにより、Memory Strategyによる自動嗜好抽出が有効になります。
+2. retrieve_memory_toolで過去の要約を取得し、パターンを分析してください
+3. 上記の「ユーザーの過去の嗜好・傾向」を考慮して、ユーザープロファイルを生成してください
 
 **重要**: 分析時は過去の嗜好を考慮し、より個別化された分析を行ってください。
 各ステップの結果を報告してください。
+
+注意: 会話履歴は自動的にメモリに保存され、Memory Strategyにより嗜好抽出が行われます。
+手動でsave_memory_toolを呼び出す必要はありません。
 """
 
     response = agent(prompt)

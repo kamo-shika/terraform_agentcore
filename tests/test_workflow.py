@@ -103,8 +103,8 @@ class TestCreateS3SummarizeWorkflow:
         """
         summarize_s3_fileタスクが正しいツールを持つことを確認。
 
-        summarize_s3_fileタスクは、use_awsとsave_memory_toolの
-        2つのツールを使用することを検証する。
+        SessionManager統合後、summarize_s3_fileタスクはuse_awsのみを使用する。
+        保存はSessionManagerによって自動的に行われる。
         """
         from app.workflow import create_s3_summarize_workflow
 
@@ -114,7 +114,8 @@ class TestCreateS3SummarizeWorkflow:
 
         # Assert
         assert "use_aws" in summarize_task["tools"]
-        assert "save_memory_tool" in summarize_task["tools"]
+        # SessionManager統合後、save_memory_toolは不要
+        assert "save_memory_tool" not in summarize_task["tools"]
 
     def test_task_analyze_patterns_has_retrieve_memory_tool(self):
         """
@@ -132,12 +133,12 @@ class TestCreateS3SummarizeWorkflow:
         # Assert
         assert "retrieve_memory_tool" in analyze_task["tools"]
 
-    def test_task_generate_profile_has_save_memory_tool(self):
+    def test_task_generate_profile_does_not_have_save_memory_tool(self):
         """
-        generate_profileタスクがsave_memory_toolを持つことを確認。
+        generate_profileタスクがsave_memory_toolを持たないことを確認。
 
-        generate_profileタスクは、ユーザープロファイルを保存するために
-        save_memory_toolを使用することを検証する。
+        SessionManager統合後、保存はSessionManagerによって自動的に行われるため、
+        save_memory_toolは不要であることを検証する。
         """
         from app.workflow import create_s3_summarize_workflow
 
@@ -146,7 +147,8 @@ class TestCreateS3SummarizeWorkflow:
         profile_task = next(task for task in workflow["tasks"] if task["task_id"] == "generate_profile")
 
         # Assert
-        assert "save_memory_tool" in profile_task["tools"]
+        # SessionManager統合後、save_memory_toolは不要
+        assert "save_memory_tool" not in profile_task["tools"]
 
     def test_all_tasks_have_descriptions(self):
         """
@@ -254,10 +256,16 @@ class TestRunWorkflow:
         actor_id = "test-actor"
         session_id = "test-session"
 
-        # Mock the Agent
-        with patch("app.workflow.Agent") as mock_agent_class:
+        # Mock the Agent and create_memory
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Workflow completed successfully"
+            mock_create_memory.return_value = "mock-session-manager"
+            mock_get_prefs.return_value = ""
 
             # Act
             result = run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
@@ -335,10 +343,16 @@ class TestRunWorkflow:
         actor_id = "test-actor"
         session_id = "test-session"
 
-        # Mock Agent
-        with patch("app.workflow.Agent") as mock_agent_class:
+        # Mock Agent and create_memory
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "User profile: Technical user with data analysis focus"
+            mock_create_memory.return_value = "mock-session-manager"
+            mock_get_prefs.return_value = ""
 
             # Act
             result = run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
@@ -362,13 +376,15 @@ class TestRunWorkflow:
         actor_id = "user-456"
         session_id = "session-789"
 
-        # Mock Agent and get_past_preferences
+        # Mock Agent, create_memory and get_past_preferences
         with (
             patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Workflow completed"
+            mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
 
             # Act
@@ -390,8 +406,8 @@ class TestRunWorkflow:
         """
         ワークフローがAgentを正しいツールで作成することを確認。
 
-        Agentにworkflow、use_aws、save_memory_tool、retrieve_memory_tool、
-        save_to_memory_via_eventが渡されることを検証する。
+        SessionManager統合後は、save_memory_tool、save_to_memory_via_eventは不要。
+        use_aws、retrieve_memory_tool、get_past_preferencesのみを使用する。
         """
         from app.workflow import run_workflow
 
@@ -401,13 +417,15 @@ class TestRunWorkflow:
         actor_id = "test-actor"
         session_id = "test-session"
 
-        # Mock Agent and get_past_preferences
+        # Mock Agent, create_memory, and get_past_preferences
         with (
             patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Workflow completed"
+            mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
 
             # Act
@@ -420,8 +438,8 @@ class TestRunWorkflow:
             call_kwargs = mock_agent_class.call_args.kwargs
             assert "tools" in call_kwargs
             tools = call_kwargs["tools"]
-            # 5つのツールが渡されることを確認（save_to_memory_via_event追加）
-            assert len(tools) == 5
+            # SessionManager統合後は3つのツール（use_aws, retrieve_memory_tool, get_past_preferences）
+            assert len(tools) == 3
 
     def test_run_workflow_retrieves_past_preferences(self):
         """
@@ -438,13 +456,15 @@ class TestRunWorkflow:
         actor_id = "test-actor"
         session_id = "test-session"
 
-        # Mock Agent and get_past_preferences
+        # Mock Agent, create_memory and get_past_preferences
         with (
             patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Workflow completed"
+            mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = "ユーザーはPythonを好む傾向がある"
 
             # Act
@@ -477,10 +497,12 @@ class TestRunWorkflow:
 
         with (
             patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Analysis complete"
+            mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = past_prefs
 
             # Act
@@ -508,10 +530,12 @@ class TestRunWorkflow:
 
         with (
             patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "First analysis complete"
+            mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""  # 嗜好データなし
 
             # Act
@@ -521,12 +545,12 @@ class TestRunWorkflow:
             assert result is not None
             mock_get_prefs.assert_called_once()
 
-    def test_run_workflow_uses_save_to_memory_via_event(self):
+    def test_run_workflow_uses_session_manager(self):
         """
-        ワークフローがsave_to_memory_via_eventを使用することを確認。
+        ワークフローがSessionManagerをAgentに渡すことを確認。
 
-        Memory Strategy自動処理を有効にするため、
-        save_to_memory_via_eventがツールとして含まれることを検証する。
+        SessionManagerにより会話履歴が自動永続化され、
+        Memory Strategyによる自動処理が有効になることを検証する。
         """
         from app.workflow import run_workflow
 
@@ -538,10 +562,49 @@ class TestRunWorkflow:
 
         with (
             patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Workflow completed"
+            mock_session_manager = "mock-session-manager"
+            mock_create_memory.return_value = mock_session_manager
+            mock_get_prefs.return_value = ""
+
+            # Act
+            run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
+
+            # Assert
+            # create_memoryが正しいパラメータで呼ばれたことを確認
+            mock_create_memory.assert_called_once_with(memory_id, session_id, actor_id)
+            # Agentにsession_managerが渡されたことを確認
+            call_kwargs = mock_agent_class.call_args.kwargs
+            assert "session_manager" in call_kwargs
+            assert call_kwargs["session_manager"] == mock_session_manager
+
+    def test_run_workflow_does_not_use_save_tools(self):
+        """
+        ワークフローが保存系ツールを使用しないことを確認。
+
+        SessionManager統合後は、save_memory_tool、save_to_memory_via_eventは
+        不要であり、Agentのツールリストに含まれないことを検証する。
+        """
+        from app.workflow import run_workflow
+
+        # Arrange
+        s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
+        memory_id = "test-memory-id"
+        actor_id = "test-actor"
+        session_id = "test-session"
+
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "Workflow completed"
+            mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
 
             # Act
@@ -550,6 +613,7 @@ class TestRunWorkflow:
             # Assert
             call_kwargs = mock_agent_class.call_args.kwargs
             tools = call_kwargs.get("tools", [])
-            # save_to_memory_via_event関数が含まれることを確認
+            # 保存系ツールが含まれないことを確認
             tool_names = [getattr(t, "__name__", str(t)) for t in tools]
-            assert any("save_to_memory_via_event" in name for name in tool_names)
+            assert not any("save_memory_tool" in name for name in tool_names)
+            assert not any("save_to_memory_via_event" in name for name in tool_names)
