@@ -41,23 +41,30 @@ def create_retrieval_config() -> dict[str, Any] | None:
     """
     LTM用のRetrievalConfigを作成する。
 
-    LTM_ENABLEDがtrueの場合、過去のファイル要約を取得するための
-    RetrievalConfig設定を返す。
+    LTM_ENABLEDがtrueの場合、過去のファイル要約とActor状態を取得するための
+    RetrievalConfig設定を返す。複数のNamespaceを含む設定を返すことで、
+    SessionManagerを通じて自動的に過去情報が注入される。
 
     Returns:
-        LTM有効時: Namespace -> RetrievalConfig設定の辞書
+        LTM有効時: Namespace -> RetrievalConfig設定の辞書（複数Namespace対応）
         LTM無効時: None
     """
     if not LTM_ENABLED:
         return None
 
-    # 過去のファイル要約を取得するための設定
-    # RetrievalConfigの形式はSDKに依存するため、辞書形式で定義
+    # 複数Namespaceの設定を返す
+    # これによりSessionManagerが自動的に両方のNamespaceから情報を取得
     return {
+        # 過去のファイル要約を取得するための設定
         LTM_NAMESPACE: {
             "top_k": LTM_SUMMARY_TOP_K,
             "relevance_score": LTM_SUMMARY_SCORE,
-        }
+        },
+        # Actor状態（嗜好・傾向）を取得するための設定
+        ACTOR_STATE_NAMESPACE: {
+            "top_k": ACTOR_STATE_TOP_K,
+            "relevance_score": 0.5,  # Actor状態は広めに取得
+        },
     }
 
 
