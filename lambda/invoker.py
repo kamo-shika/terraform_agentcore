@@ -16,15 +16,27 @@ import re
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import boto3
+from botocore.config import Config
 from botocore.exceptions import ClientError
 
 # ロギング設定
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# AgentCoreクライアントのタイムアウト設定
+# AgentCore Runtimeの処理は長時間かかる可能性があるため、タイムアウトを延長
+AGENTCORE_CLIENT_READ_TIMEOUT = 900  # 15分（Lambdaタイムアウトに合わせる）
+AGENTCORE_CLIENT_CONNECT_TIMEOUT = 10  # 接続タイムアウトは短めに設定
+
 # AWSクライアントの初期化
 s3_client = boto3.client('s3')
-bedrock_agentcore = boto3.client('bedrock-agentcore')
+bedrock_agentcore = boto3.client(
+    'bedrock-agentcore',
+    config=Config(
+        read_timeout=AGENTCORE_CLIENT_READ_TIMEOUT,
+        connect_timeout=AGENTCORE_CLIENT_CONNECT_TIMEOUT
+    )
+)
 
 # 環境変数
 AGENT_RUNTIME_ARN = os.environ.get('AGENT_RUNTIME_ARN')
