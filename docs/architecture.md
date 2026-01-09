@@ -4,23 +4,35 @@
 
 ## システム構成図
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   S3 Bucket     │────▶│     Lambda      │────▶│ AgentCore       │
-│  (トリガー)      │     │   (Invoker)     │     │  Runtime        │
-└─────────────────┘     └────────┬────────┘     └────────┬────────┘
-                                │                        │
-                                │                        ▼
-                                │              ┌─────────────────┐
-                                │              │ Strands Agent   │
-                                │              │ (Docker/ECR)    │
-                                │              └────────┬────────┘
-                                │                        │
-                                ▼                        ▼
-                       ┌─────────────────┐     ┌─────────────────┐
-                       │   S3 Bucket     │     │ AgentCore       │
-                       │  (出力保存)     │     │   Memory        │
-                       └─────────────────┘     └─────────────────┘
+```mermaid
+flowchart TB
+    subgraph trigger["トリガー"]
+        S3In[("S3 Bucket<br/>トリガー")]
+    end
+
+    subgraph processing["処理"]
+        Lambda["Lambda<br/>Invoker"]
+        Runtime["AgentCore<br/>Runtime"]
+        Agent["Strands Agent<br/>(Docker/ECR)"]
+    end
+
+    subgraph storage["ストレージ"]
+        S3Out[("S3 Bucket<br/>出力保存")]
+        Memory[("AgentCore<br/>Memory")]
+    end
+
+    S3In -->|"ファイルアップロード"| Lambda
+    Lambda -->|"invoke"| Runtime
+    Runtime -->|"実行"| Agent
+    Agent -->|"会話履歴保存"| Memory
+    Lambda -->|"結果保存"| S3Out
+
+    style S3In fill:#ff9900,color:#fff
+    style S3Out fill:#ff9900,color:#fff
+    style Lambda fill:#ff9900,color:#fff
+    style Runtime fill:#8c4fff,color:#fff
+    style Agent fill:#8c4fff,color:#fff
+    style Memory fill:#8c4fff,color:#fff
 ```
 
 ## コンポーネント
@@ -248,12 +260,22 @@ S3ファイルアップロードをトリガーに、3ステップのワーク�
 
 ### ワークフロー概要
 
-```
-Step 1: S3ファイル読み取り → 要約生成 → メモリ保存
-    ↓
-Step 2: 過去の要約を取得 → パターン分析
-    ↓
-Step 3: ユーザープロファイル生成 → メモリ保存
+```mermaid
+flowchart LR
+    subgraph workflow["S3ワークフロー（3ステップ）"]
+        direction TB
+        Step1["Step 1<br/>S3ファイル読み取り<br/>→ 要約生成"]
+        Step2["Step 2<br/>過去の要約取得<br/>→ パターン分析"]
+        Step3["Step 3<br/>プロファイル生成<br/>→ メモリ保存"]
+        Step1 --> Step2 --> Step3
+    end
+
+    S3[("S3<br/>ファイル")] --> Step1
+    Memory[("AgentCore<br/>Memory")] <-.->|"取得/保存"| Step2
+    Step3 --> Memory
+
+    style S3 fill:#ff9900,color:#fff
+    style Memory fill:#8c4fff,color:#fff
 ```
 
 ### 使用例
