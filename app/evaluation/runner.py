@@ -6,8 +6,6 @@ CLIエントリーポイントとして `python -m app.evaluation.runner` で実
 
 import argparse
 import json
-import sys
-from typing import Any
 
 from strands import Agent
 from strands_evals import Case, Experiment
@@ -35,7 +33,7 @@ def _create_task_function():
     """
     system_prompt = _load_summarize_prompt()
 
-    def task_function(case: Case[dict, str]) -> dict[str, Any]:
+    def task_function(case: Case[dict, str]) -> str:
         """
         Step 1のタスクを実行する。
 
@@ -43,13 +41,14 @@ def _create_task_function():
             case: テストケース（入力にs3_infoとfile_contentを含む）
 
         Returns:
-            出力とトラジェクトリを含む辞書
+            要約結果の文字列
         """
         # エージェントを作成（ツールなしで直接要約）
         agent = Agent(
             model=MODEL_ID,
             system_prompt=system_prompt,
             tools=[],  # 評価時はツールなしで直接ファイル内容を渡す
+            callback_handler=None,  # コールバックを無効化
         )
 
         # ファイル内容を含むプロンプトを構築
@@ -66,10 +65,7 @@ def _create_task_function():
 """
 
         response = agent(prompt)
-        return {
-            "output": str(response),
-            "trajectory": [],  # ツールなしのためトラジェクトリは空
-        }
+        return str(response)  # 文字列を返す（OutputEvaluatorの要件）
 
     return task_function
 
