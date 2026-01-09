@@ -16,9 +16,11 @@
 ### アプリケーション構造
 - `app/main.py` - AgentCore Runtimeから呼び出される`handler()`関数を持つエントリーポイント
 - `app/agent.py` - Strandsフレームワークを使用したエージェント設定（Claude Sonnet 4.5モデル）
-- `app/memory.py` - AgentCore Memoryの統合設定
-- `app/tools.py` - カスタムツール（retrieve_memory_tool, save_memory_tool）
+- `app/config.py` - アプリケーション設定（環境変数、LTM設定、ロギング）
+- `app/memory.py` - AgentCore Memoryの統合設定（セッション管理、LTM取得・保存）
+- `app/tools.py` - カスタムツール（@toolデコレータ付き、エージェントから呼び出し可能）
 - `app/workflow.py` - S3ファイル要約ワークフロー（3ステップ処理）
+- `app/server.py` - ローカル開発用HTTPサーバー
 - `app/prompts/` - プロンプトテンプレート
   - `workflow/summarize.md` - S3ファイル要約用
   - `workflow/analyze.md` - パターン分析用
@@ -145,7 +147,7 @@ Makefile変数をオーバーライドするか、`terraform/variables.tf`のデ
 `app/agent.py`を編集し、`tools=[]`パラメータにツールを追加します。`strands-agents-tools`パッケージから利用可能です。
 
 ### Memory統合
-Memory機能は以下の2つの方法で利用可能です：
+Memory機能は以下の方法で利用可能です：
 
 **1. セッションメモリ（短期記憶）**
 ```python
@@ -154,11 +156,25 @@ session_manager = create_memory(memory_id, session_id, actor_id)
 agent = create_agent(session_manager=session_manager)
 ```
 
-**2. カスタムツール（長期記憶）**
+**2. 長期メモリ直接操作（memory.py）**
 ```python
-from app.tools import retrieve_memory_tool, save_memory_tool
+from app.memory import retrieve_past_summaries, retrieve_actor_state, save_actor_state
 
-# 過去の要約を取得
+# 過去のファイル要約を取得
+summaries = retrieve_past_summaries(memory_id, actor_id, query="検索クエリ")
+
+# Actor状態（嗜好・傾向）を取得
+states = retrieve_actor_state(memory_id, actor_id)
+
+# Actor状態を保存
+record_id = save_actor_state(memory_id, actor_id, state_text="ユーザーの傾向...")
+```
+
+**3. カスタムツール（@tool デコレータ付き、エージェントから呼び出し可能）**
+```python
+from app.tools import retrieve_memory_tool, save_memory_tool, save_to_memory_via_event
+
+# 過去の要約を取得（エージェントツールとして使用）
 records = retrieve_memory_tool(memory_id, actor_id, query="検索クエリ")
 
 # メモリに保存
@@ -168,11 +184,19 @@ record_id = save_memory_tool(
     actor_id=actor_id,
     content="保存するコンテンツ"
 )
+
+# イベント経由でメモリに保存（SessionManager経由で自動抽出）
+save_to_memory_via_event(session_manager, content="保存するコンテンツ")
 ```
 
 **Namespace設計**:
-- `/file-summaries/{actorId}` - ファイル要約の保存
-- `/actor-state/{actorId}` - ユーザープロファイルの保存
+- `/file-summaries/{actorId}` - ファイル要約の保存（Semantic Strategy）
+- `/actor-state/{actorId}` - ユーザープロファイルの保存（User Preference Strategy）
+
+**LTM設定（config.py）**:
+- `LTM_ENABLED` - 長期メモリ機能の有効/無効（デフォルト: true）
+- `LTM_SUMMARY_TOP_K` - 取得する要約の最大件数（デフォルト: 10）
+- `LTM_SUMMARY_SCORE` - 関連度スコア閾値（デフォルト: 0.3）
 
 ### ワークフロー機能
 S3ファイルアップロードをトリガーに、3ステップのワークフローを実行します：
@@ -183,6 +207,7 @@ from app.workflow import run_workflow
 result = run_workflow(
     s3_info={"bucket": "bucket-name", "key": "path/to/file.txt"},
     actor_id="user-123",
+    session_id="session-123",
     memory_id="agentcore_memory-xxx"
 )
 ```
