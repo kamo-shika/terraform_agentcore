@@ -4,15 +4,19 @@ Strands Agents workflowツールを使用したワークフロー管理。
 このモジュールは、S3ファイルの要約とユーザープロファイル生成のための
 ワークフローを定義・実行する機能を提供する。
 
+Workflow Tool APIを使用したマルチエージェント実行により、
+各タスクは専用のサブエージェントによって実行される。
+
 SessionManager統合により、会話履歴は自動的に永続化され、
 Memory Strategyによる自動処理（嗜好抽出・要約等）が有効になる。
 """
 
 import logging
+import os
 from typing import Any
 
 from strands import Agent
-from strands_tools import use_aws
+from strands_tools import use_aws, workflow
 
 from .config import MODEL_ID
 from .memory import create_memory
@@ -153,10 +157,11 @@ def run_workflow(s3_info: dict[str, str], actor_id: str, session_id: str, memory
     session_manager = create_memory(memory_id, session_id, actor_id)
 
     # ワークフロー用エージェントを作成（SessionManagerにより会話は自動永続化）
+    # workflowツールによりマルチエージェント実行が可能
     agent = Agent(
         model=MODEL_ID,
         system_prompt="あなたはワークフローを管理するエージェントです。",
-        tools=[use_aws, retrieve_memory_tool, get_past_preferences],
+        tools=[use_aws, retrieve_memory_tool, get_past_preferences, workflow],
         session_manager=session_manager,  # SessionManagerを渡す
     )
 

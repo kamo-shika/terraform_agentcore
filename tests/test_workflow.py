@@ -438,8 +438,9 @@ class TestRunWorkflow:
             call_kwargs = mock_agent_class.call_args.kwargs
             assert "tools" in call_kwargs
             tools = call_kwargs["tools"]
-            # SessionManager統合後は3つのツール（use_aws, retrieve_memory_tool, get_past_preferences）
-            assert len(tools) == 3
+            # マルチエージェント対応後は4つのツール
+            # （use_aws, retrieve_memory_tool, get_past_preferences, workflow）
+            assert len(tools) == 4
 
     def test_run_workflow_retrieves_past_preferences(self):
         """
@@ -617,3 +618,46 @@ class TestRunWorkflow:
             tool_names = [getattr(t, "__name__", str(t)) for t in tools]
             assert not any("save_memory_tool" in name for name in tool_names)
             assert not any("save_to_memory_via_event" in name for name in tool_names)
+
+
+class TestMultiAgentWorkflow:
+    """
+    マルチエージェントワークフローのテスト。
+
+    Workflow Tool APIを使用したマルチエージェント対応の
+    ワークフロー実装をテストする。
+    """
+
+    def test_run_workflow_uses_workflow_tool(self):
+        """
+        run_workflowがWorkflow Toolを使用することを確認。
+        """
+        from app.workflow import run_workflow
+
+        s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
+        memory_id = "test-memory-id"
+        actor_id = "test-actor"
+        session_id = "test-session"
+
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
+            mock_agent_instance = mock_agent_class.return_value
+            mock_agent_instance.return_value = "Workflow completed"
+            mock_create_memory.return_value = "mock-session-manager"
+            mock_get_prefs.return_value = ""
+
+            run_workflow(
+                s3_info=s3_info,
+                actor_id=actor_id,
+                session_id=session_id,
+                memory_id=memory_id,
+            )
+
+            # Agentがworkflowツールを持っていることを確認
+            call_kwargs = mock_agent_class.call_args.kwargs
+            tools = call_kwargs.get("tools", [])
+            tool_names = [getattr(t, "__name__", str(t)) for t in tools]
+            assert any("workflow" in name.lower() for name in tool_names)
