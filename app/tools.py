@@ -51,22 +51,16 @@ def retrieve_memory_tool(
         - content: 要約内容（テキスト）
         - relevanceScore: 関連度スコア
     """
-    # LTMが無効の場合は空リストを返す
+    # 早期リターン: 必須条件のバリデーション
     if not LTM_ENABLED:
         logger.info("LTM is disabled, returning empty list")
         return []
-
-    # memory_idが空の場合は空リストを返す
     if not memory_id or not memory_id.strip():
         logger.warning("Empty memory_id, returning empty list")
         return []
-
-    # actor_idが空の場合は空リストを返す
     if not actor_id or not actor_id.strip():
         logger.warning("Empty actor_id, returning empty list")
         return []
-
-    # クエリが空の場合は空リストを返す
     if not query or not query.strip():
         logger.warning("Empty query, returning empty list")
         return []
@@ -87,7 +81,7 @@ def retrieve_memory_tool(
         records = response.get("memoryRecordSummaries", [])
         logger.info(f"Retrieved {len(records)} memory records for actor={actor_id}")
 
-        # テストが期待する形式に変換
+        # APIレスポンスを統一形式に正規化
         return [
             {
                 "memoryRecordId": record.get("memoryRecordId"),
@@ -125,27 +119,19 @@ def save_memory_tool(
     Returns:
         作成されたメモリレコードのID、失敗時はNone
     """
-    # LTMが無効の場合はNoneを返す
+    # 早期リターン: 必須条件のバリデーション
     if not LTM_ENABLED:
         logger.info("LTM is disabled, skipping save")
         return None
-
-    # contentが空の場合はNoneを返す
     if not content or not content.strip():
         logger.warning("Empty content, skipping save")
         return None
-
-    # memory_idが空の場合はNoneを返す
     if not memory_id or not memory_id.strip():
         logger.warning("Empty memory_id, skipping save")
         return None
-
-    # actor_idが空の場合はNoneを返す
     if not actor_id or not actor_id.strip():
         logger.warning("Empty actor_id, skipping save")
         return None
-
-    # namespaceが空の場合はNoneを返す
     if not namespace or not namespace.strip():
         logger.warning("Empty namespace, skipping save")
         return None
@@ -153,7 +139,7 @@ def save_memory_tool(
     client = _get_agentcore_client()
     resolved_namespace = _resolve_namespace(namespace, actor_id)
 
-    # ユニークなリクエストIDを生成
+    # リクエストIDとタイムスタンプを生成
     request_id = f"memory-{actor_id}-{uuid.uuid4().hex[:8]}"
     # UNIXタイムスタンプ（秒）を整数で取得
     timestamp = int(datetime.now(UTC).timestamp())
@@ -220,32 +206,22 @@ def save_to_memory_via_event(
     Returns:
         create_event APIのレスポンス、失敗時はNone
     """
-    # LTMが無効の場合はNoneを返す
+    # 早期リターン: 必須条件のバリデーション
     if not LTM_ENABLED:
         logger.info("LTM is disabled, skipping save via event")
         return None
-
-    # memory_idが空の場合はNoneを返す
     if not memory_id or not memory_id.strip():
         logger.warning("Empty memory_id, skipping save via event")
         return None
-
-    # session_idが空の場合はNoneを返す
     if not session_id or not session_id.strip():
         logger.warning("Empty session_id, skipping save via event")
         return None
-
-    # actor_idが空の場合はNoneを返す
     if not actor_id or not actor_id.strip():
         logger.warning("Empty actor_id, skipping save via event")
         return None
-
-    # user_contentが空の場合はNoneを返す
     if not user_content or not user_content.strip():
         logger.warning("Empty user_content, skipping save via event")
         return None
-
-    # assistant_contentが空の場合はNoneを返す
     if not assistant_content or not assistant_content.strip():
         logger.warning("Empty assistant_content, skipping save via event")
         return None
@@ -292,17 +268,13 @@ def get_past_preferences(memory_id: str, actor_id: str) -> str:
         過去の嗜好データをテキストとして結合した文字列。
         データがない場合やエラー時は空文字列を返す。
     """
-    # LTMが無効の場合は空文字列を返す
+    # 早期リターン: 必須条件のバリデーション
     if not LTM_ENABLED:
         logger.info("LTM is disabled, returning empty preferences")
         return ""
-
-    # memory_idが空の場合は空文字列を返す
     if not memory_id or not memory_id.strip():
         logger.warning("Empty memory_id, returning empty preferences")
         return ""
-
-    # actor_idが空の場合は空文字列を返す
     if not actor_id or not actor_id.strip():
         logger.warning("Empty actor_id, returning empty preferences")
         return ""

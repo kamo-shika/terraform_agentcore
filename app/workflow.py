@@ -66,8 +66,7 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
             "会話履歴は自動的に保存され、Memory Strategyにより嗜好が抽出されます。"
         )
 
-    # SessionManager統合後、save_memory_toolは不要
-    # 保存はSessionManagerが自動的に行い、Memory Strategyで嗜好抽出される
+    # 注: save_memory_toolは不要（SessionManagerが会話履歴を自動永続化）
     return {
         "workflow_id": "s3_summarize",
         "tasks": [
@@ -75,7 +74,7 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
                 "task_id": "summarize_s3_file",
                 "description": "S3ファイルを読み取り、内容を要約",
                 "system_prompt": summarize_prompt,
-                "tools": ["use_aws"],  # SessionManagerが自動保存
+                "tools": ["use_aws"],
                 "dependencies": [],
             },
             {
@@ -89,7 +88,7 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
                 "task_id": "generate_profile",
                 "description": "ユーザー特性をまとめてプロファイルを生成",
                 "system_prompt": profile_prompt,
-                "tools": [],  # SessionManagerが自動保存
+                "tools": [],
                 "dependencies": ["analyze_patterns"],
             },
         ],
@@ -153,9 +152,7 @@ def run_workflow(s3_info: dict[str, str], actor_id: str, session_id: str, memory
     # SessionManagerを作成（会話履歴の自動永続化 + LTMからの情報自動取得）
     session_manager = create_memory(memory_id, session_id, actor_id)
 
-    # ワークフロー用エージェントを作成
-    # SessionManager統合により、保存系ツールは不要
-    # 会話履歴は自動的に永続化され、Memory Strategyにより嗜好抽出される
+    # ワークフロー用エージェントを作成（SessionManagerにより会話は自動永続化）
     agent = Agent(
         model=MODEL_ID,
         system_prompt="あなたはワークフローを管理するエージェントです。",
