@@ -43,7 +43,7 @@ AWSが提供するマネージドエージェントホスティングサービ�
 | `app/agent.py` | Strands frameworkを使用したエージェント設定（Claude Sonnet 4.5使用） |
 | `app/config.py` | 設定モジュール（環境変数、バリデーション） |
 | `app/memory.py` | AgentCore Memory統合設定 |
-| `app/tools.py` | カスタムツール（retrieve_memory_tool, save_memory_tool） |
+| `app/tools.py` | カスタムツール（@toolデコレータ付き、エージェントから呼び出し可能） |
 | `app/workflow.py` | S3ファイル要約ワークフロー（3ステップ処理） |
 | `app/server.py` | FastAPIサーバー（コンテナ内エンドポイント） |
 | `app/prompts/` | プロンプトテンプレート |
@@ -92,7 +92,7 @@ S3イベントをトリガーにAgentCoreを呼び出すLambda関数。
 │   ├── agent.py         # エージェント設定（Claude Sonnet 4.5使用）
 │   ├── config.py        # 設定モジュール（環境変数管理）
 │   ├── memory.py        # AgentCore Memory統合設定
-│   ├── tools.py         # カスタムツール（retrieve/save_memory_tool）
+│   ├── tools.py         # カスタムツール（@toolデコレータ付き）
 │   ├── workflow.py      # S3ファイル要約ワークフロー
 │   ├── server.py        # FastAPIサーバー
 │   └── prompts/         # プロンプトテンプレート
@@ -189,21 +189,19 @@ session_manager = create_memory(memory_id, session_id, actor_id)
 agent = create_agent(session_manager=session_manager)
 ```
 
-#### 2. カスタムツール（長期記憶）
+#### 2. 長期メモリ直接操作（memory.py）
 
 ```python
-from app.tools import retrieve_memory_tool, save_memory_tool
+from app.memory import retrieve_past_summaries, retrieve_actor_state, save_actor_state
 
 # 過去の要約を取得
-records = retrieve_memory_tool(memory_id, actor_id, query="検索クエリ")
+summaries = retrieve_past_summaries(memory_id, actor_id, query="検索クエリ")
 
-# メモリに保存
-record_id = save_memory_tool(
-    namespace="/file-summaries/{actorId}",
-    memory_id=memory_id,
-    actor_id=actor_id,
-    content="保存するコンテンツ"
-)
+# Actor状態を取得
+states = retrieve_actor_state(memory_id, actor_id)
+
+# Actor状態を保存
+record_id = save_actor_state(memory_id, actor_id, state_text="ユーザーの傾向...")
 ```
 
 ### Memory Strategy
@@ -266,6 +264,7 @@ from app.workflow import run_workflow
 result = run_workflow(
     s3_info={"bucket": "bucket-name", "key": "path/to/file.txt"},
     actor_id="user-123",
+    session_id="session-123",
     memory_id="agentcore_memory-xxx"
 )
 ```
