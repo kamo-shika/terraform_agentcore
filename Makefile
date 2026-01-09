@@ -34,7 +34,7 @@ define check_runtime_id
 	fi
 endef
 
-.PHONY: init plan apply destroy login build push deploy deploy-init setup test test-cov ci-test update-endpoint get-runtime-info list-versions list-endpoints rollback lint format validate-tf clean help
+.PHONY: init plan apply destroy login build push deploy deploy-init setup test test-cov ci-test eval eval-step1 update-endpoint get-runtime-info list-versions list-endpoints rollback lint format validate-tf clean help
 
 # --- Help ---
 help:
@@ -50,6 +50,10 @@ help:
 	@echo "    test           - テストを実行"
 	@echo "    test-cov       - カバレッジ付きでテストを実行"
 	@echo "    ci-test        - CI用テスト (XML レポート出力)"
+	@echo ""
+	@echo "  評価 (LLM-as-a-Judge):"
+	@echo "    eval           - 全ステップの評価を実行"
+	@echo "    eval-step1     - Step 1 (要約) の評価を実行"
 	@echo ""
 	@echo "  Terraform:"
 	@echo "    init           - terraform init"
@@ -104,6 +108,15 @@ test-cov:
 
 ci-test:
 	uv run pytest tests/ --cov=app --cov-report=xml --cov-report=term-missing
+
+# --- Evaluation (LLM-as-a-Judge) ---
+eval:
+	@echo "Running full evaluation..."
+	uv run python -m app.evaluation.runner
+
+eval-step1:
+	@echo "Running Step 1 (summarize) evaluation..."
+	uv run python -m app.evaluation.runner --step1
 
 # --- Terraform ---
 init:
