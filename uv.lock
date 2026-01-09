@@ -2550,6 +2550,26 @@ wheels = [
 ]
 
 [[package]]
+name = "strands-agents-evals"
+version = "0.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "boto3" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation-threading" },
+    { name = "opentelemetry-sdk" },
+    { name = "pydantic" },
+    { name = "rich" },
+    { name = "strands-agents" },
+    { name = "strands-agents-tools" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e7/65/4d12083121d16eecebc6ba8f77fe0d4fdd96b282c629693c7f555ff8b423/strands_agents_evals-0.1.1.tar.gz", hash = "sha256:383de79fcaf2ab891a80a337fe4d6d90e7bccc745b6e40f87c50c727e9912a78", size = 104208, upload-time = "2025-12-15T22:26:55.254Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/51/038e56f6db7eb7e4854d4c561dc0e6d10d7fdc910833b519253def8485a5/strands_agents_evals-0.1.1-py3-none-any.whl", hash = "sha256:2f1dde682d92a02ec5c317bd7e0e6735c9cd5bd5cc099bc627e734210e02e854", size = 96086, upload-time = "2025-12-15T22:26:53.633Z" },
+]
+
+[[package]]
 name = "strands-agents-tools"
 version = "0.2.18"
 source = { registry = "https://pypi.org/simple" }
@@ -2619,6 +2639,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-mock" },
     { name = "ruff" },
+    { name = "strands-agents-evals" },
 ]
 
 [package.metadata]
@@ -2639,6 +2660,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=6.0.0" },
     { name = "pytest-mock", specifier = ">=3.14.0" },
     { name = "ruff", specifier = ">=0.9.0" },
+    { name = "strands-agents-evals", specifier = ">=0.1.0" },
 ]
 
 [[package]]
