@@ -4,23 +4,35 @@
 
 ## システム構成図
 
-```
-┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│   S3 Bucket     │────▶│     Lambda      │────▶│ AgentCore       │
-│  (トリガー)      │     │   (Invoker)     │     │  Runtime        │
-└─────────────────┘     └────────┬────────┘     └────────┬────────┘
-                                │                        │
-                                │                        ▼
-                                │              ┌─────────────────┐
-                                │              │ Strands Agent   │
-                                │              │ (Docker/ECR)    │
-                                │              └────────┬────────┘
-                                │                        │
-                                ▼                        ▼
-                       ┌─────────────────┐     ┌─────────────────┐
-                       │   S3 Bucket     │     │ AgentCore       │
-                       │  (出力保存)     │     │   Memory        │
-                       └─────────────────┘     └─────────────────┘
+```mermaid
+flowchart TB
+    subgraph trigger["トリガー"]
+        S3In[("S3 Bucket<br/>トリガー")]
+    end
+
+    subgraph processing["処理"]
+        Lambda["Lambda<br/>Invoker"]
+        Runtime["AgentCore<br/>Runtime"]
+        Agent["Strands Agent<br/>(Docker/ECR)"]
+    end
+
+    subgraph storage["ストレージ"]
+        S3Out[("S3 Bucket<br/>出力保存")]
+        Memory[("AgentCore<br/>Memory")]
+    end
+
+    S3In -->|"ファイルアップロード"| Lambda
+    Lambda -->|"invoke"| Runtime
+    Runtime -->|"実行"| Agent
+    Agent -->|"会話履歴保存"| Memory
+    Lambda -->|"結果保存"| S3Out
+
+    style S3In fill:#ff9900,color:#fff
+    style S3Out fill:#ff9900,color:#fff
+    style Lambda fill:#ff9900,color:#fff
+    style Runtime fill:#8c4fff,color:#fff
+    style Agent fill:#8c4fff,color:#fff
+    style Memory fill:#8c4fff,color:#fff
 ```
 
 ## コンポーネント
@@ -43,7 +55,7 @@ AWSが提供するマネージドエージェントホスティングサービ�
 | `app/agent.py` | Strands frameworkを使用したエージェント設定（Claude Sonnet 4.5使用） |
 | `app/config.py` | 設定モジュール（環境変数、バリデーション） |
 | `app/memory.py` | AgentCore Memory統合設定 |
-| `app/tools.py` | カスタムツール（retrieve_memory_tool, save_memory_tool） |
+| `app/tools.py` | カスタムツール（@toolデコレータ付き、エージェントから呼び出し可能） |
 | `app/workflow.py` | S3ファイル要約ワークフロー（3ステップ処理） |
 | `app/server.py` | FastAPIサーバー（コンテナ内エンドポイント） |
 | `app/prompts/` | プロンプトテンプレート |
@@ -92,7 +104,7 @@ S3イベントをトリガーにAgentCoreを呼び出すLambda関数。
 │   ├── agent.py         # エージェント設定（Claude Sonnet 4.5使用）
 │   ├── config.py        # 設定モジュール（環境変数管理）
 │   ├── memory.py        # AgentCore Memory統合設定
-│   ├── tools.py         # カスタムツール（retrieve/save_memory_tool）
+│   ├── tools.py         # カスタムツール（@toolデコレータ付き）
 │   ├── workflow.py      # S3ファイル要約ワークフロー
 │   ├── server.py        # FastAPIサーバー
 │   └── prompts/         # プロンプトテンプレート
@@ -189,21 +201,19 @@ session_manager = create_memory(memory_id, session_id, actor_id)
 agent = create_agent(session_manager=session_manager)
 ```
 
-#### 2. カスタムツール（長期記憶）
+#### 2. 長期メモリ直接操作（memory.py）
 
 ```python
-from app.tools import retrieve_memory_tool, save_memory_tool
+from app.memory import retrieve_past_summaries, retrieve_actor_state, save_actor_state
 
 # 過去の要約を取得
-records = retrieve_memory_tool(memory_id, actor_id, query="検索クエリ")
+summaries = retrieve_past_summaries(memory_id, actor_id, query="検索クエリ")
 
-# メモリに保存
-record_id = save_memory_tool(
-    namespace="/file-summaries/{actorId}",
-    memory_id=memory_id,
-    actor_id=actor_id,
-    content="保存するコンテンツ"
-)
+# Actor状態を取得
+states = retrieve_actor_state(memory_id, actor_id)
+
+# Actor状態を保存
+record_id = save_actor_state(memory_id, actor_id, state_text="ユーザーの傾向...")
 ```
 
 ### Memory Strategy
@@ -250,12 +260,22 @@ S3ファイルアップロードをトリガーに、3ステップのワーク�
 
 ### ワークフロー概要
 
-```
-Step 1: S3ファイル読み取り → 要約生成 → メモリ保存
-    ↓
-Step 2: 過去の要約を取得 → パターン分析
-    ↓
-Step 3: ユーザープロファイル生成 → メモリ保存
+```mermaid
+flowchart LR
+    subgraph workflow["S3ワークフロー（3ステップ）"]
+        direction TB
+        Step1["Step 1<br/>S3ファイル読み取り<br/>→ 要約生成"]
+        Step2["Step 2<br/>過去の要約取得<br/>→ パターン分析"]
+        Step3["Step 3<br/>プロファイル生成<br/>→ メモリ保存"]
+        Step1 --> Step2 --> Step3
+    end
+
+    S3[("S3<br/>ファイル")] --> Step1
+    Memory[("AgentCore<br/>Memory")] <-.->|"取得/保存"| Step2
+    Step3 --> Memory
+
+    style S3 fill:#ff9900,color:#fff
+    style Memory fill:#8c4fff,color:#fff
 ```
 
 ### 使用例
@@ -266,6 +286,7 @@ from app.workflow import run_workflow
 result = run_workflow(
     s3_info={"bucket": "bucket-name", "key": "path/to/file.txt"},
     actor_id="user-123",
+    session_id="session-123",
     memory_id="agentcore_memory-xxx"
 )
 ```
