@@ -29,9 +29,22 @@ from .tools import (
 logger = logging.getLogger(__name__)
 
 
-def create_s3_summarize_workflow() -> dict[str, Any]:
+def create_s3_summarize_workflow(
+    bucket: str = "",
+    key: str = "",
+    memory_id: str = "",
+    actor_id: str = "",
+    past_preferences: str = "",
+) -> dict[str, Any]:
     """
     S3ファイル要約→パターン分析→プロファイル生成のワークフロー定義を作成する。
+
+    Args:
+        bucket: S3バケット名
+        key: S3オブジェクトキー
+        memory_id: AgentCore MemoryのID
+        actor_id: アクターID（ユーザーID）
+        past_preferences: 過去の嗜好データ
 
     Returns:
         ワークフロー定義の辞書。以下のキーを含む:
@@ -70,27 +83,33 @@ def create_s3_summarize_workflow() -> dict[str, Any]:
             "会話履歴は自動的に保存され、Memory Strategyにより嗜好が抽出されます。"
         )
 
+    # 嗜好情報のセクションを構築
+    if past_preferences:
+        preferences_section = f"\n\n過去の嗜好:\n{past_preferences}"
+    else:
+        preferences_section = ""
+
     # 注: save_memory_toolは不要（SessionManagerが会話履歴を自動永続化）
     return {
         "workflow_id": "s3_summarize",
         "tasks": [
             {
                 "task_id": "summarize_s3_file",
-                "description": "S3ファイルを読み取り、内容を要約",
+                "description": f"S3ファイルを読み取り、内容を要約\nバケット: {bucket}\nキー: {key}",
                 "system_prompt": summarize_prompt,
                 "tools": ["use_aws"],
                 "dependencies": [],
             },
             {
                 "task_id": "analyze_patterns",
-                "description": "過去の要約と比較してパターンを分析",
+                "description": f"過去の要約と比較してパターンを分析\nMemory ID: {memory_id}\nActor ID: {actor_id}",
                 "system_prompt": analyze_prompt,
                 "tools": ["retrieve_memory_tool"],
                 "dependencies": ["summarize_s3_file"],
             },
             {
                 "task_id": "generate_profile",
-                "description": "ユーザー特性をまとめてプロファイルを生成",
+                "description": f"ユーザー特性をまとめてプロファイルを生成{preferences_section}",
                 "system_prompt": profile_prompt,
                 "tools": [],
                 "dependencies": ["analyze_patterns"],
@@ -131,27 +150,9 @@ def run_workflow(s3_info: dict[str, str], actor_id: str, session_id: str, memory
     if not key or not key.strip():
         raise ValueError("key must not be empty")
 
-    # ワークフロー定義を取得
-    workflow_def = create_s3_summarize_workflow()
-
     # 過去の嗜好を取得（精度向上のため）
     past_preferences = get_past_preferences(memory_id=memory_id, actor_id=actor_id)
     logger.info(f"Retrieved past preferences: {len(past_preferences)} chars")
-
-    # 嗜好セクションを構築
-    if past_preferences:
-        preferences_section = f"""
-## ユーザーの過去の嗜好・傾向
-以下は過去の分析から抽出されたユーザーの嗜好データです。
-分析時にこれらの傾向を考慮してください。
-
-{past_preferences}
-"""
-    else:
-        preferences_section = """
-## ユーザーの過去の嗜好・傾向
-過去の嗜好データはありません（初回分析）。
-"""
 
     # SessionManagerを作成（会話履歴の自動永続化 + LTMからの情報自動取得）
     session_manager = create_memory(memory_id, session_id, actor_id)
@@ -165,38 +166,30 @@ def run_workflow(s3_info: dict[str, str], actor_id: str, session_id: str, memory
         session_manager=session_manager,  # SessionManagerを渡す
     )
 
+    # パラメータを渡してワークフロー定義を作成
+    workflow_def = create_s3_summarize_workflow(
+        bucket=bucket,
+        key=key,
+        memory_id=memory_id,
+        actor_id=actor_id,
+        past_preferences=past_preferences,
+    )
+
     logger.info(f"Creating workflow: {workflow_def['workflow_id']}")
 
-    # ワークフローを作成・実行
-    # SessionManagerにより会話は自動保存され、Memory Strategyで嗜好抽出
-    prompt = f"""
-以下のワークフローを実行してください。
+    # Workflow Tool APIを使用してワークフローを作成・実行
+    # 各タスクは専用のサブエージェントによって実行される
+    agent.tool.workflow(
+        action="create",
+        workflow_id=workflow_def["workflow_id"],
+        tasks=workflow_def["tasks"],
+    )
 
-S3ファイル情報:
-- バケット: {bucket}
-- キー: {key}
-
-メモリ情報:
-- Memory ID: {memory_id}
-- Session ID: {session_id}
-- Actor ID: {actor_id}
-
-{preferences_section}
-
-ワークフロー手順:
-1. まず、use_awsツールでS3からファイルを読み取り、内容を要約してください
-2. retrieve_memory_toolで過去の要約を取得し、パターンを分析してください
-3. 上記の「ユーザーの過去の嗜好・傾向」を考慮して、ユーザープロファイルを生成してください
-
-**重要**: 分析時は過去の嗜好を考慮し、より個別化された分析を行ってください。
-各ステップの結果を報告してください。
-
-注意: 会話履歴は自動的にメモリに保存され、Memory Strategyにより嗜好抽出が行われます。
-手動でsave_memory_toolを呼び出す必要はありません。
-"""
-
-    response = agent(prompt)
-    result = str(response) if response else "Workflow completed"
+    # ワークフローを開始
+    result = agent.tool.workflow(
+        action="start",
+        workflow_id=workflow_def["workflow_id"],
+    )
 
     logger.info("Workflow execution completed")
-    return result
+    return str(result) if result else "Workflow completed"

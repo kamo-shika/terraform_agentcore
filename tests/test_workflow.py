@@ -263,7 +263,8 @@ class TestRunWorkflow:
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
-            mock_agent_instance.return_value = "Workflow completed successfully"
+            mock_workflow_tool = mock_agent_instance.tool.workflow
+            mock_workflow_tool.return_value = {"status": "success", "result": "Workflow completed successfully"}
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
 
@@ -271,9 +272,9 @@ class TestRunWorkflow:
             result = run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
-            # Agentが呼ばれたことを確認
-            assert mock_agent_instance.called
-            assert result == "Workflow completed successfully"
+            # Workflow Tool APIが呼ばれたことを確認
+            assert mock_workflow_tool.called
+            assert "success" in result.lower() or "workflow" in result.lower()
 
     def test_run_workflow_without_s3_info_raises_error(self):
         """
@@ -350,7 +351,11 @@ class TestRunWorkflow:
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
-            mock_agent_instance.return_value = "User profile: Technical user with data analysis focus"
+            mock_workflow_tool = mock_agent_instance.tool.workflow
+            mock_workflow_tool.return_value = {
+                "status": "success",
+                "result": "User profile: Technical user with data analysis focus"
+            }
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
 
@@ -365,7 +370,7 @@ class TestRunWorkflow:
         """
         ワークフロー作成時に正しいパラメータが渡されることを確認。
 
-        S3情報、memory_id、actor_id、session_idがAgentのプロンプトに
+        S3情報、memory_id、actor_idがワークフローのタスクdescriptionに
         適切に埋め込まれることを検証する。
         """
         from app.workflow import run_workflow
@@ -383,7 +388,8 @@ class TestRunWorkflow:
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
-            mock_agent_instance.return_value = "Workflow completed"
+            mock_workflow_tool = mock_agent_instance.tool.workflow
+            mock_workflow_tool.return_value = {"status": "success"}
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
 
@@ -394,13 +400,21 @@ class TestRunWorkflow:
             # Agentが正しいツールで作成されたことを確認
             call_kwargs = mock_agent_class.call_args.kwargs
             assert "tools" in call_kwargs
-            # Agentのプロンプトにパラメータが含まれることを確認
-            prompt_arg = mock_agent_instance.call_args[0][0]
-            assert "test-bucket" in prompt_arg
-            assert "data/file.txt" in prompt_arg
-            assert memory_id in prompt_arg
-            assert actor_id in prompt_arg
-            assert session_id in prompt_arg
+
+            # workflow(action="create")が呼ばれ、タスクにパラメータが含まれることを確認
+            create_calls = [
+                call for call in mock_workflow_tool.call_args_list
+                if call.kwargs.get("action") == "create"
+            ]
+            assert len(create_calls) == 1
+            tasks = create_calls[0].kwargs["tasks"]
+
+            # 各タスクのdescriptionにパラメータが含まれることを確認
+            all_descriptions = " ".join(task["description"] for task in tasks)
+            assert "test-bucket" in all_descriptions
+            assert "data/file.txt" in all_descriptions
+            assert memory_id in all_descriptions
+            assert actor_id in all_descriptions
 
     def test_run_workflow_uses_agent_with_correct_tools(self):
         """
@@ -464,7 +478,8 @@ class TestRunWorkflow:
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
-            mock_agent_instance.return_value = "Workflow completed"
+            mock_workflow_tool = mock_agent_instance.tool.workflow
+            mock_workflow_tool.return_value = {"status": "success"}
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = "ユーザーはPythonを好む傾向がある"
 
@@ -476,16 +491,22 @@ class TestRunWorkflow:
             mock_get_prefs.assert_called_once_with(
                 memory_id=memory_id, actor_id=actor_id
             )
-            # プロンプトに過去の嗜好が含まれることを確認
-            prompt_arg = mock_agent_instance.call_args[0][0]
-            assert "過去の嗜好" in prompt_arg or "嗜好" in prompt_arg
+            # ワークフローのタスクdescriptionに過去の嗜好が含まれることを確認
+            create_calls = [
+                call for call in mock_workflow_tool.call_args_list
+                if call.kwargs.get("action") == "create"
+            ]
+            assert len(create_calls) == 1
+            tasks = create_calls[0].kwargs["tasks"]
+            all_descriptions = " ".join(task["description"] for task in tasks)
+            assert "Python" in all_descriptions or "嗜好" in all_descriptions
 
     def test_run_workflow_includes_past_preferences_in_prompt(self):
         """
-        過去の嗜好がエージェントのプロンプトに含まれることを確認。
+        過去の嗜好がワークフローのタスクdescriptionに含まれることを確認。
 
-        取得した嗜好データがプロンプトに埋め込まれ、
-        エージェントが嗜好を考慮した分析を行えることを検証する。
+        取得した嗜好データがタスクdescriptionに埋め込まれ、
+        サブエージェントが嗜好を考慮した分析を行えることを検証する。
         """
         from app.workflow import run_workflow
 
@@ -502,7 +523,8 @@ class TestRunWorkflow:
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
         ):
             mock_agent_instance = mock_agent_class.return_value
-            mock_agent_instance.return_value = "Analysis complete"
+            mock_workflow_tool = mock_agent_instance.tool.workflow
+            mock_workflow_tool.return_value = {"status": "success"}
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = past_prefs
 
@@ -510,9 +532,15 @@ class TestRunWorkflow:
             run_workflow(s3_info=s3_info, actor_id=actor_id, session_id=session_id, memory_id=memory_id)
 
             # Assert
-            prompt_arg = mock_agent_instance.call_args[0][0]
-            # 嗜好データがプロンプトに含まれる
-            assert "効率重視" in prompt_arg or past_prefs in prompt_arg
+            # ワークフローのタスクdescriptionに嗜好データが含まれることを確認
+            create_calls = [
+                call for call in mock_workflow_tool.call_args_list
+                if call.kwargs.get("action") == "create"
+            ]
+            assert len(create_calls) == 1
+            tasks = create_calls[0].kwargs["tasks"]
+            all_descriptions = " ".join(task["description"] for task in tasks)
+            assert "効率重視" in all_descriptions or "コーディング" in all_descriptions
 
     def test_run_workflow_handles_empty_preferences(self):
         """
@@ -661,3 +689,136 @@ class TestMultiAgentWorkflow:
             tools = call_kwargs.get("tools", [])
             tool_names = [getattr(t, "__name__", str(t)) for t in tools]
             assert any("workflow" in name.lower() for name in tool_names)
+
+    def test_run_workflow_calls_workflow_create(self):
+        """
+        run_workflowがworkflow(action="create")を呼び出すことを確認。
+
+        ワークフロー定義（タスク、システムプロンプト、依存関係）が
+        Workflow Tool APIに正しく渡されることを検証する。
+        """
+        from app.workflow import run_workflow
+
+        s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
+        memory_id = "test-memory-id"
+        actor_id = "test-actor"
+        session_id = "test-session"
+
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
+            mock_agent_instance = mock_agent_class.return_value
+            mock_workflow_tool = mock_agent_instance.tool.workflow
+            mock_workflow_tool.return_value = {"status": "success"}
+            mock_create_memory.return_value = "mock-session-manager"
+            mock_get_prefs.return_value = ""
+
+            run_workflow(
+                s3_info=s3_info,
+                actor_id=actor_id,
+                session_id=session_id,
+                memory_id=memory_id,
+            )
+
+            # workflow(action="create")が呼ばれたことを確認
+            create_calls = [
+                call for call in mock_workflow_tool.call_args_list
+                if call.kwargs.get("action") == "create"
+            ]
+            assert len(create_calls) == 1
+
+            # タスクが渡されていることを確認
+            create_call = create_calls[0]
+            assert "tasks" in create_call.kwargs
+            tasks = create_call.kwargs["tasks"]
+            assert len(tasks) == 3
+
+            # 各タスクにsystem_promptが含まれていることを確認
+            for task in tasks:
+                assert "system_prompt" in task
+                assert len(task["system_prompt"]) > 0
+
+    def test_run_workflow_calls_workflow_start(self):
+        """
+        run_workflowがworkflow(action="start")を呼び出すことを確認。
+
+        ワークフロー作成後に開始されることを検証する。
+        """
+        from app.workflow import run_workflow
+
+        s3_info = {"bucket": "test-bucket", "key": "test-file.txt"}
+        memory_id = "test-memory-id"
+        actor_id = "test-actor"
+        session_id = "test-session"
+
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
+            mock_agent_instance = mock_agent_class.return_value
+            mock_workflow_tool = mock_agent_instance.tool.workflow
+            mock_workflow_tool.return_value = {"status": "success"}
+            mock_create_memory.return_value = "mock-session-manager"
+            mock_get_prefs.return_value = ""
+
+            run_workflow(
+                s3_info=s3_info,
+                actor_id=actor_id,
+                session_id=session_id,
+                memory_id=memory_id,
+            )
+
+            # workflow(action="start")が呼ばれたことを確認
+            start_calls = [
+                call for call in mock_workflow_tool.call_args_list
+                if call.kwargs.get("action") == "start"
+            ]
+            assert len(start_calls) == 1
+
+    def test_run_workflow_passes_s3_info_in_task_description(self):
+        """
+        run_workflowがS3情報をタスクのdescriptionに含めることを確認。
+
+        最初のタスク（summarize_s3_file）のdescriptionにS3バケットと
+        キー情報が含まれることを検証する。
+        """
+        from app.workflow import run_workflow
+
+        s3_info = {"bucket": "my-test-bucket", "key": "data/report.txt"}
+        memory_id = "test-memory-id"
+        actor_id = "test-actor"
+        session_id = "test-session"
+
+        with (
+            patch("app.workflow.Agent") as mock_agent_class,
+            patch("app.workflow.create_memory") as mock_create_memory,
+            patch("app.workflow.get_past_preferences") as mock_get_prefs,
+        ):
+            mock_agent_instance = mock_agent_class.return_value
+            mock_workflow_tool = mock_agent_instance.tool.workflow
+            mock_workflow_tool.return_value = {"status": "success"}
+            mock_create_memory.return_value = "mock-session-manager"
+            mock_get_prefs.return_value = ""
+
+            run_workflow(
+                s3_info=s3_info,
+                actor_id=actor_id,
+                session_id=session_id,
+                memory_id=memory_id,
+            )
+
+            # workflow(action="create")の呼び出しを取得
+            create_calls = [
+                call for call in mock_workflow_tool.call_args_list
+                if call.kwargs.get("action") == "create"
+            ]
+            assert len(create_calls) == 1
+
+            # 最初のタスクのdescriptionにS3情報が含まれることを確認
+            tasks = create_calls[0].kwargs["tasks"]
+            summarize_task = next(t for t in tasks if t["task_id"] == "summarize_s3_file")
+            assert "my-test-bucket" in summarize_task["description"]
+            assert "data/report.txt" in summarize_task["description"]
