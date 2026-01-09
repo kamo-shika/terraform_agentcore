@@ -110,3 +110,42 @@ class TestEvaluationPackage:
         assert callable(create_step1_cases)
         assert callable(create_step1_evaluators)
         assert callable(run_step1_evaluation)
+
+
+class TestSummarizePrompt:
+    """要約プロンプトのテスト（評価・本番共通）"""
+
+    def test_summarize_prompt_exists(self):
+        """要約プロンプトファイルが存在することを確認"""
+        from pathlib import Path
+
+        prompt_path = Path(__file__).parent.parent / "app" / "prompts" / "workflow" / "summarize.md"
+        assert prompt_path.exists(), "要約プロンプトファイルが存在する必要がある"
+
+    def test_prompt_does_not_contain_s3_tool_instruction(self):
+        """プロンプトにS3ツール取得指示が含まれないことを確認（S3取得はworkflow.pyで制御）"""
+        from pathlib import Path
+
+        prompt_path = Path(__file__).parent.parent / "app" / "prompts" / "workflow" / "summarize.md"
+        content = prompt_path.read_text(encoding="utf-8")
+        # use_awsツールの使用指示が含まれていないことを確認
+        assert "use_aws" not in content.lower(), "プロンプトにuse_awsツールの指示が含まれてはいけない"
+        assert "s3からファイルを取得" not in content.lower(), "プロンプトにS3取得指示が含まれてはいけない"
+
+    def test_prompt_contains_summarization_instructions(self):
+        """プロンプトに要約の基本指示が含まれることを確認"""
+        from pathlib import Path
+
+        prompt_path = Path(__file__).parent.parent / "app" / "prompts" / "workflow" / "summarize.md"
+        content = prompt_path.read_text(encoding="utf-8")
+        # 基本的な要約指示が含まれていることを確認
+        assert "要約" in content or "分析" in content, "要約または分析の指示が必要"
+        assert "500文字" in content or "簡潔" in content, "長さ制限または簡潔さの指示が必要"
+
+    def test_runner_loads_prompt_without_s3_instruction(self):
+        """runner.pyが読み込むプロンプトにS3取得指示が含まれないことを確認"""
+        from app.evaluation.runner import _load_summarize_prompt
+
+        prompt = _load_summarize_prompt()
+        # プロンプトにはuse_awsツールの指示が含まれない
+        assert "use_aws" not in prompt.lower(), "プロンプトにuse_awsツールの指示が含まれてはいけない"
