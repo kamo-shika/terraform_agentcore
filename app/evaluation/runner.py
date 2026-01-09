@@ -16,11 +16,10 @@ from .evaluators import create_step1_evaluators
 
 
 def _load_summarize_prompt() -> str:
-    """評価用のsummarize.mdからシステムプロンプトを読み込む"""
+    """workflow/summarize.mdからシステムプロンプトを読み込む"""
     from pathlib import Path
 
-    # 評価用プロンプトを優先して使用（S3ツール取得指示なし）
-    prompt_path = Path(__file__).parent.parent / "prompts" / "evaluation" / "summarize.md"
+    prompt_path = Path(__file__).parent.parent / "prompts" / "workflow" / "summarize.md"
     if prompt_path.exists():
         return prompt_path.read_text(encoding="utf-8")
     return "あなたはファイル分析の専門家です。ファイル内容を要約してください。"
