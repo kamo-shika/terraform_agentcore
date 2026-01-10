@@ -130,7 +130,10 @@ def run_step1_evaluation(
         print("評価完了")
         for i, report in enumerate(reports):
             print(f"\n[ケース {i + 1}] {cases[i].name}")
-            report.run_display(static=_should_use_static_display())
+            if _should_use_static_display():
+                report.display()
+            else:
+                report.run_display()
 
     return reports
 
@@ -231,7 +234,10 @@ def run_step2_evaluation(
         print("評価完了")
         for i, report in enumerate(reports):
             print(f"\n[ケース {i + 1}] {cases[i].name}")
-            report.run_display(static=_should_use_static_display())
+            if _should_use_static_display():
+                report.display()
+            else:
+                report.run_display()
 
     return reports
 
@@ -331,7 +337,10 @@ def run_step3_evaluation(
         print("評価完了")
         for i, report in enumerate(reports):
             print(f"\n[ケース {i + 1}] {cases[i].name}")
-            report.run_display(static=_should_use_static_display())
+            if _should_use_static_display():
+                report.display()
+            else:
+                report.run_display()
 
     return reports
 
