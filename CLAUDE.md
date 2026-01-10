@@ -22,9 +22,10 @@
 - `app/workflow.py` - S3ファイル要約ワークフロー（3ステップ処理）
 - `app/server.py` - ローカル開発用HTTPサーバー
 - `app/prompts/` - プロンプトテンプレート
-  - `workflow/summarize.md` - S3ファイル要約用
-  - `workflow/analyze.md` - パターン分析用
-  - `workflow/profile.md` - プロファイル生成用
+  - `workflow/system.md` - ワークフロー用システムプロンプト
+  - `workflow/step1.md` - Step 1: S3ファイル要約用
+  - `workflow/step2.md` - Step 2: パターン分析用
+  - `workflow/step3.md` - Step 3: プロファイル生成用
 
 ### インフラストラクチャ（Terraform）
 - `terraform/agentcore.tf` - AgentCore RuntimeとMemoryリソース
@@ -34,10 +35,12 @@
 - `terraform/variables.tf` - プロジェクト設定（デフォルトは`ap-northeast-1`）
 
 ### 処理モード
-**S3ワークフローモード**: S3ファイルアップロードをトリガーに3ステップのワークフローを実行
-- Step 1: S3ファイル読み取り・要約・メモリ保存
+**S3ワークフローモード**: S3ファイルアップロードをトリガーにシングルエージェント方式で3ステップのワークフローを実行
+- 同一エージェントインスタンスを3回呼び出し、コンテキストを保持
+- Step 1: S3ファイル読み取り・要約
 - Step 2: 過去の要約を取得・パターン分析
-- Step 3: ユーザープロファイル生成・メモリ保存
+- Step 3: ユーザープロファイル生成
+- SessionManagerによる会話履歴の自動永続化とMemory Strategyによる嗜好自動抽出
 
 ## 設定
 

@@ -16,10 +16,10 @@ from .evaluators import create_step1_evaluators
 
 
 def _load_summarize_prompt() -> str:
-    """workflow/summarize.mdからシステムプロンプトを読み込む"""
+    """workflow/step1.mdから要約用プロンプトを読み込む"""
     from pathlib import Path
 
-    prompt_path = Path(__file__).parent.parent / "prompts" / "workflow" / "summarize.md"
+    prompt_path = Path(__file__).parent.parent / "prompts" / "workflow" / "step1.md"
     if prompt_path.exists():
         return prompt_path.read_text(encoding="utf-8")
     return "あなたはファイル分析の専門家です。ファイル内容を要約してください。"

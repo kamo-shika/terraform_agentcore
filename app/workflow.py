@@ -1,15 +1,17 @@
 """
-Strands Agents workflowツールを使用したワークフロー管理。
+シングルエージェント方式によるワークフロー管理。
 
 このモジュールは、S3ファイルの要約とユーザープロファイル生成のための
 ワークフローを定義・実行する機能を提供する。
 
 SessionManager統合により、会話履歴は自動的に永続化され、
 Memory Strategyによる自動処理（嗜好抽出・要約等）が有効になる。
+
+シングルエージェント方式では、同一のエージェントインスタンスを使って
+3回呼び出しを行い、コンテキストを保持しながら処理を進める。
 """
 
 import logging
-from typing import Any
 
 from strands import Agent
 from strands_tools import use_aws
@@ -25,79 +27,19 @@ from .tools import (
 logger = logging.getLogger(__name__)
 
 
-def create_s3_summarize_workflow() -> dict[str, Any]:
+def run_workflow(
+    s3_info: dict[str, str], actor_id: str, session_id: str, memory_id: str
+) -> str:
     """
-    S3ファイル要約→パターン分析→プロファイル生成のワークフロー定義を作成する。
+    S3ファイル要約ワークフローをシングルエージェント方式で実行する。
 
-    Returns:
-        ワークフロー定義の辞書。以下のキーを含む:
-        - workflow_id: ワークフローID ("s3_summarize")
-        - tasks: タスク定義のリスト
-    """
-    # プロンプトファイルから読み込む（見つからない場合はデフォルト値を使用）
-    # SessionManager統合により、保存は自動的に行われる
-    try:
-        summarize_prompt = load_prompt("workflow/summarize")
-    except FileNotFoundError:
-        logger.warning("workflow/summarize.md not found, using default prompt")
-        summarize_prompt = (
-            "あなたはS3ファイルを読み取り、内容を要約するエージェントです。\n"
-            "use_awsツールを使用してS3ファイルの内容を取得し、\n"
-            "その内容を要約してください。会話履歴は自動的に保存されます。"
-        )
+    3ステップのワークフロー:
+    - Step 1: S3ファイル読み取り・要約
+    - Step 2: パターン分析
+    - Step 3: プロファイル生成
 
-    try:
-        analyze_prompt = load_prompt("workflow/analyze")
-    except FileNotFoundError:
-        logger.warning("workflow/analyze.md not found, using default prompt")
-        analyze_prompt = (
-            "あなたは過去の要約データを分析するエージェントです。\n"
-            "retrieve_memory_toolを使用して過去の要約を取得し、\n"
-            "現在の要約と比較してパターンや傾向を分析してください。"
-        )
-
-    try:
-        profile_prompt = load_prompt("workflow/profile")
-    except FileNotFoundError:
-        logger.warning("workflow/profile.md not found, using default prompt")
-        profile_prompt = (
-            "あなたはユーザープロファイルを生成するエージェントです。\n"
-            "分析結果に基づいてユーザーの特性や傾向をまとめてください。\n"
-            "会話履歴は自動的に保存され、Memory Strategyにより嗜好が抽出されます。"
-        )
-
-    # 注: save_memory_toolは不要（SessionManagerが会話履歴を自動永続化）
-    return {
-        "workflow_id": "s3_summarize",
-        "tasks": [
-            {
-                "task_id": "summarize_s3_file",
-                "description": "S3ファイルを読み取り、内容を要約",
-                "system_prompt": summarize_prompt,
-                "tools": ["use_aws"],
-                "dependencies": [],
-            },
-            {
-                "task_id": "analyze_patterns",
-                "description": "過去の要約と比較してパターンを分析",
-                "system_prompt": analyze_prompt,
-                "tools": ["retrieve_memory_tool"],
-                "dependencies": ["summarize_s3_file"],
-            },
-            {
-                "task_id": "generate_profile",
-                "description": "ユーザー特性をまとめてプロファイルを生成",
-                "system_prompt": profile_prompt,
-                "tools": [],
-                "dependencies": ["analyze_patterns"],
-            },
-        ],
-    }
-
-
-def run_workflow(s3_info: dict[str, str], actor_id: str, session_id: str, memory_id: str) -> str:
-    """
-    S3ファイル要約ワークフローを実行する。
+    同一エージェントインスタンスを使用することで、
+    コンテキストが各ステップ間で保持される。
 
     Args:
         s3_info: S3バケットとキー情報を含む辞書
@@ -127,71 +69,46 @@ def run_workflow(s3_info: dict[str, str], actor_id: str, session_id: str, memory
     if not key or not key.strip():
         raise ValueError("key must not be empty")
 
-    # ワークフロー定義を取得
-    workflow_def = create_s3_summarize_workflow()
-
     # 過去の嗜好を取得（精度向上のため）
     past_preferences = get_past_preferences(memory_id=memory_id, actor_id=actor_id)
     logger.info(f"Retrieved past preferences: {len(past_preferences)} chars")
 
-    # 嗜好セクションを構築
-    if past_preferences:
-        preferences_section = f"""
-## ユーザーの過去の嗜好・傾向
-以下は過去の分析から抽出されたユーザーの嗜好データです。
-分析時にこれらの傾向を考慮してください。
-
-{past_preferences}
-"""
-    else:
-        preferences_section = """
-## ユーザーの過去の嗜好・傾向
-過去の嗜好データはありません（初回分析）。
-"""
-
     # SessionManagerを作成（会話履歴の自動永続化 + LTMからの情報自動取得）
     session_manager = create_memory(memory_id, session_id, actor_id)
+
+    # プロンプトファイルを読み込む
+    system_prompt = load_prompt("workflow/system")
+    step1_prompt = load_prompt("workflow/step1")
+    step2_prompt = load_prompt("workflow/step2")
+    step3_prompt = load_prompt("workflow/step3")
 
     # ワークフロー用エージェントを作成（SessionManagerにより会話は自動永続化）
     agent = Agent(
         model=MODEL_ID,
-        system_prompt="あなたはワークフローを管理するエージェントです。",
-        tools=[use_aws, retrieve_memory_tool, get_past_preferences],
-        session_manager=session_manager,  # SessionManagerを渡す
+        system_prompt=system_prompt,
+        tools=[use_aws, retrieve_memory_tool],
+        session_manager=session_manager,
     )
 
-    logger.info(f"Creating workflow: {workflow_def['workflow_id']}")
+    logger.info("Starting single-agent workflow execution")
 
-    # ワークフローを作成・実行
-    # SessionManagerにより会話は自動保存され、Memory Strategyで嗜好抽出
-    prompt = f"""
-以下のワークフローを実行してください。
+    # Step 1: S3ファイル読み取り・要約
+    logger.info("Step 1: Reading and summarizing S3 file")
+    step1_input = step1_prompt.format(bucket=bucket, key=key)
+    agent(step1_input)
 
-S3ファイル情報:
-- バケット: {bucket}
-- キー: {key}
+    # Step 2: パターン分析
+    logger.info("Step 2: Analyzing patterns")
+    step2_input = step2_prompt.format(
+        memory_id=memory_id,
+        actor_id=actor_id,
+    )
+    agent(step2_input)
 
-メモリ情報:
-- Memory ID: {memory_id}
-- Session ID: {session_id}
-- Actor ID: {actor_id}
-
-{preferences_section}
-
-ワークフロー手順:
-1. まず、use_awsツールでS3からファイルを読み取り、内容を要約してください
-2. retrieve_memory_toolで過去の要約を取得し、パターンを分析してください
-3. 上記の「ユーザーの過去の嗜好・傾向」を考慮して、ユーザープロファイルを生成してください
-
-**重要**: 分析時は過去の嗜好を考慮し、より個別化された分析を行ってください。
-各ステップの結果を報告してください。
-
-注意: 会話履歴は自動的にメモリに保存され、Memory Strategyにより嗜好抽出が行われます。
-手動でsave_memory_toolを呼び出す必要はありません。
-"""
-
-    response = agent(prompt)
-    result = str(response) if response else "Workflow completed"
+    # Step 3: プロファイル生成
+    logger.info("Step 3: Generating profile")
+    step3_input = step3_prompt.format(past_preferences=past_preferences)
+    result = agent(step3_input)
 
     logger.info("Workflow execution completed")
-    return result
+    return str(result) if result else "Workflow completed"
