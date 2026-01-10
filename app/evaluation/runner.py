@@ -353,6 +353,7 @@ def main():
     parser.add_argument("--step3", action="store_true", help="Step 3（プロファイル生成）の評価を実行")
     parser.add_argument("--all", action="store_true", help="全ステップの評価を実行")
     parser.add_argument("--output", type=str, help="結果をJSONファイルに出力")
+    parser.add_argument("--json", action="store_true", help="結果をJSON形式でコンソールに出力")
     parser.add_argument("--quiet", action="store_true", help="詳細出力を抑制")
 
     args = parser.parse_args()
@@ -385,7 +386,7 @@ def main():
             reports = run_step3_evaluation(verbose=not args.quiet)
             cases = create_step3_cases()
 
-        if args.output:
+        if args.output or args.json:
             for i, report in enumerate(reports):
                 # report.to_dict()で全評価結果（reasonを含む）を取得
                 report_dict = report.to_dict()
@@ -393,10 +394,13 @@ def main():
                 report_dict["case_name"] = cases[i].name
                 all_results.append(report_dict)
 
-    if args.output and all_results:
-        with open(args.output, "w", encoding="utf-8") as f:
-            json.dump(all_results, f, ensure_ascii=False, indent=2)
-        print(f"結果を {args.output} に出力しました")
+    if all_results:
+        if args.output:
+            with open(args.output, "w", encoding="utf-8") as f:
+                json.dump(all_results, f, ensure_ascii=False, indent=2)
+            print(f"結果を {args.output} に出力しました")
+        elif args.json:
+            print(json.dumps(all_results, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
