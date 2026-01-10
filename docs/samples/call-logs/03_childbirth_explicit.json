@@ -1,0 +1,24 @@
+{
+  "call_id": "CALL-2025-01-10-00005",
+  "customer_id": "C-10005",
+  "call_date": "2025-01-10",
+  "call_time": "09:45:00",
+  "duration_seconds": 520,
+  "call_reason": "サービス追加相談",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "先月子供が生まれまして、見守りサービスについて聞きたいのですが。"},
+    {"speaker": "operator", "text": "お子様のご誕生おめでとうございます！見守りサービスについてですね。"},
+    {"speaker": "customer", "text": "ありがとうございます。まだ赤ちゃんなんですが、将来的に使えるサービスを知っておきたくて。"},
+    {"speaker": "operator", "text": "当社では、お子様向けにGPS見守りサービスやキッズスマホをご用意しております。"},
+    {"speaker": "customer", "text": "キッズスマホは何歳から使えますか？"},
+    {"speaker": "operator", "text": "小学生からのご利用が多いですが、3歳頃からご利用いただけるGPS端末もございます。"},
+    {"speaker": "customer", "text": "なるほど。もう少し大きくなったら検討します。資料だけ送ってもらえますか。"},
+    {"speaker": "operator", "text": "かしこまりました。資料をお送りいたします。"}
+  ],
+  "metadata": {
+    "event_type": "出産・子育て",
+    "detection_type": "explicit",
+    "difficulty": "easy"
+  }
+}

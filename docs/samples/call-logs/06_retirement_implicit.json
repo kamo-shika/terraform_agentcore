@@ -1,0 +1,24 @@
+{
+  "call_id": "CALL-2025-01-10-00012",
+  "customer_id": "C-10012",
+  "call_date": "2025-01-10",
+  "call_time": "11:15:00",
+  "duration_seconds": 390,
+  "call_reason": "機種変更相談",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "スマホの機種変更を考えているんですが。"},
+    {"speaker": "operator", "text": "機種変更のご相談ですね。現在お使いの機種はいかがでしょうか。"},
+    {"speaker": "customer", "text": "今のスマホ、文字が小さくて見づらくなってきて。最近は時間もあるのでゆっくり操作できるものがいいんです。"},
+    {"speaker": "operator", "text": "文字が大きく見やすい機種をお探しですね。"},
+    {"speaker": "customer", "text": "そうなんです。仕事を辞めてからは急いで操作することもないし、シンプルなのがいいなと。"},
+    {"speaker": "operator", "text": "でしたら、らくらくスマートフォンがおすすめです。文字が大きく、操作もシンプルです。"},
+    {"speaker": "customer", "text": "それ、店頭で触ってみることはできますか？"},
+    {"speaker": "operator", "text": "はい、お近くのショップで実機をお試しいただけます。"}
+  ],
+  "metadata": {
+    "event_type": "退職・定年",
+    "detection_type": "implicit",
+    "difficulty": "medium"
+  }
+}

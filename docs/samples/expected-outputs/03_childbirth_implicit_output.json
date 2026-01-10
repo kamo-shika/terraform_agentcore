@@ -1,0 +1,38 @@
+{
+  "step1_output": {
+    "call_id": "CALL-2025-01-10-00006",
+    "customer_id": "C-10006",
+    "call_date": "2025-01-10",
+    "detected_events": [
+      {
+        "event_type": "出産・子育て",
+        "timing": "進行中",
+        "confidence": "medium",
+        "evidence": "最近育休に入って、家にいることが多くなった / しばらくは家で子供と過ごすことになりそう"
+      }
+    ],
+    "no_event_detected": false
+  },
+  "step2_output": {
+    "customer_id": "C-10006",
+    "current_event": {
+      "event_type": "出産・子育て",
+      "confidence": "medium"
+    },
+    "historical_context": {
+      "previous_events": [],
+      "pattern_analysis": "育休取得中。子育て関連サービスのニーズが今後発生する可能性が高い。"
+    },
+    "is_new_event": true,
+    "related_to_previous": false
+  },
+  "step3_output": {
+    "customer_id": "C-10006",
+    "call_date": "2025-01-10",
+    "recommendations": [
+      {"action": "見守りサービスの情報提供", "priority": "medium", "reason": "子育て中の顧客向けサービス（将来的なニーズ）"},
+      {"action": "自宅Wi-Fi環境の強化提案", "priority": "low", "reason": "在宅時間増加に伴うネット利用増加の可能性"}
+    ],
+    "life_stage_summary": "子育て期（乳幼児）"
+  }
+}

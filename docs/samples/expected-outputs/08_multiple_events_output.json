@@ -1,0 +1,46 @@
+{
+  "step1_output": {
+    "call_id": "CALL-2025-01-10-00015",
+    "customer_id": "C-10015",
+    "call_date": "2025-01-10",
+    "detected_events": [
+      {
+        "event_type": "就職・転職",
+        "timing": "1ヶ月以内",
+        "confidence": "high",
+        "evidence": "来月転職して / 大阪の会社に転職が決まって"
+      },
+      {
+        "event_type": "引っ越し",
+        "timing": "1ヶ月以内",
+        "confidence": "high",
+        "evidence": "それに合わせて引っ越すことになった / 大阪市内に引っ越します / 3月1日から新居に住む予定"
+      }
+    ],
+    "no_event_detected": false
+  },
+  "step2_output": {
+    "customer_id": "C-10015",
+    "current_event": {
+      "event_types": ["就職・転職", "引っ越し"],
+      "confidence": "high"
+    },
+    "historical_context": {
+      "previous_events": [],
+      "pattern_analysis": "転職に伴う引っ越し。キャリアの転換期と生活環境の変化が同時発生。リモートワーク中心の働き方への移行を検討中。"
+    },
+    "is_new_event": true,
+    "related_to_previous": false,
+    "event_correlation": "転職が引っ越しのトリガー。両イベントは強く関連している。"
+  },
+  "step3_output": {
+    "customer_id": "C-10015",
+    "call_date": "2025-01-10",
+    "recommendations": [
+      {"action": "光回線高速プラン（新居）", "priority": "high", "reason": "リモートワーク用に高速ネット環境を希望"},
+      {"action": "でんき・ガスセット割", "priority": "medium", "reason": "新居での生活インフラ一括契約の機会"},
+      {"action": "モバイルWi-Fi追加", "priority": "low", "reason": "出張・外出時のリモートワーク対応"}
+    ],
+    "life_stage_summary": "キャリア転換期・新生活開始"
+  }
+}

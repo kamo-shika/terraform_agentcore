@@ -1,0 +1,13 @@
+{
+  "step1_output": {
+    "call_id": "CALL-2025-01-10-00016",
+    "customer_id": "C-10016",
+    "call_date": "2025-01-10",
+    "detected_events": [],
+    "no_event_detected": true,
+    "note": "料金確認のみの問い合わせ。ライフイベントの示唆なし。"
+  },
+  "step2_output": null,
+  "step3_output": null,
+  "processing_note": "ライフイベント未検出のため、Step 2/Step 3の処理はスキップ"
+}

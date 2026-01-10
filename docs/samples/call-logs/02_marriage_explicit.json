@@ -1,0 +1,23 @@
+{
+  "call_id": "CALL-2025-01-10-00003",
+  "customer_id": "C-10003",
+  "call_date": "2025-01-10",
+  "call_time": "14:00:00",
+  "duration_seconds": 450,
+  "call_reason": "プラン変更相談",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "来月結婚するんですが、家族割について教えてください。"},
+    {"speaker": "operator", "text": "ご結婚おめでとうございます！家族割についてですね。"},
+    {"speaker": "customer", "text": "ありがとうございます。彼女も同じ〇〇通信を使っているので、一緒にしたいなと思って。"},
+    {"speaker": "operator", "text": "素晴らしいですね。家族割を適用いただきますと、お二人合わせて毎月1,100円お安くなります。"},
+    {"speaker": "customer", "text": "それはいいですね。手続きは結婚届を出してからですか？"},
+    {"speaker": "operator", "text": "はい、ご入籍後に戸籍謄本または住民票をご提出いただければ適用となります。"},
+    {"speaker": "customer", "text": "わかりました。入籍したらまた連絡します。"}
+  ],
+  "metadata": {
+    "event_type": "結婚",
+    "detection_type": "explicit",
+    "difficulty": "easy"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "call_id": "CALL-2025-01-10-00002",
+  "customer_id": "C-10002",
+  "call_date": "2025-01-10",
+  "call_time": "11:30:00",
+  "duration_seconds": 280,
+  "call_reason": "住所変更",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "あの、登録している住所を変更したいのですが。"},
+    {"speaker": "operator", "text": "住所変更のお手続きですね。新しいご住所をお伺いしてもよろしいでしょうか。"},
+    {"speaker": "customer", "text": "神奈川県横浜市青葉区〇〇町1-2-3です。来週から届け先をそちらにしてほしいんです。"},
+    {"speaker": "operator", "text": "かしこまりました。請求書などの送付先も新しい住所に変更されますか。"},
+    {"speaker": "customer", "text": "はい、全部新しい方でお願いします。今の住所にはもういないので。"},
+    {"speaker": "operator", "text": "承知いたしました。住所変更のお手続きを進めさせていただきます。"}
+  ],
+  "metadata": {
+    "event_type": "引っ越し",
+    "detection_type": "implicit",
+    "difficulty": "medium"
+  }
+}

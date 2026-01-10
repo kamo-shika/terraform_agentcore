@@ -1,0 +1,24 @@
+{
+  "call_id": "CALL-2025-01-10-00013",
+  "customer_id": "C-10013",
+  "call_date": "2025-01-10",
+  "call_time": "14:30:00",
+  "duration_seconds": 420,
+  "call_reason": "契約変更相談",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "息子が来月から一人暮らしを始めるので、契約を分けたいのですが。"},
+    {"speaker": "operator", "text": "お子様が独立されるんですね。現在はご家族でまとめてご契約いただいている状況でしょうか。"},
+    {"speaker": "customer", "text": "はい、家族4人で家族割を使っています。息子だけ別契約にしたいんです。"},
+    {"speaker": "operator", "text": "かしこまりました。息子様を別契約に移行いたしますと、家族割のグループから外れる形になります。"},
+    {"speaker": "customer", "text": "息子も〇〇通信を続けるって言っているんですが、何か割引はありますか？"},
+    {"speaker": "operator", "text": "単身でも学生割引や、25歳以下割引が適用できる場合がございます。息子様のご年齢をお伺いしてもよろしいでしょうか。"},
+    {"speaker": "customer", "text": "22歳です。大学4年生で、就職を機に一人暮らしします。"},
+    {"speaker": "operator", "text": "それでしたら、25歳以下割引が適用可能です。新規契約扱いになりますので、端末割引も併用できます。"}
+  ],
+  "metadata": {
+    "event_type": "独立（子供）",
+    "detection_type": "explicit",
+    "difficulty": "easy"
+  }
+}

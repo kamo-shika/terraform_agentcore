@@ -1,0 +1,23 @@
+{
+  "call_id": "CALL-2025-01-10-00004",
+  "customer_id": "C-10004",
+  "call_date": "2025-01-10",
+  "call_time": "15:20:00",
+  "duration_seconds": 380,
+  "call_reason": "名義変更",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "名義の変更をしたいのですが。"},
+    {"speaker": "operator", "text": "名義変更のお手続きですね。どのような変更でしょうか。"},
+    {"speaker": "customer", "text": "苗字が変わったので、山田から鈴木に変更してほしいんです。"},
+    {"speaker": "operator", "text": "苗字のご変更ですね。確認のため、変更理由をお伺いしてもよろしいでしょうか。"},
+    {"speaker": "customer", "text": "先月入籍したので、主人の姓に変わりました。"},
+    {"speaker": "operator", "text": "ご結婚されたんですね。おめでとうございます。戸籍謄本か住民票をご用意いただければお手続き可能です。"},
+    {"speaker": "customer", "text": "わかりました。住民票を取ってきます。"}
+  ],
+  "metadata": {
+    "event_type": "結婚",
+    "detection_type": "implicit",
+    "difficulty": "medium"
+  }
+}

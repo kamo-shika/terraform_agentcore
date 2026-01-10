@@ -1,0 +1,26 @@
+{
+  "call_id": "CALL-2025-01-10-00015",
+  "customer_id": "C-10015",
+  "call_date": "2025-01-10",
+  "call_time": "16:00:00",
+  "duration_seconds": 550,
+  "call_reason": "総合相談",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "いろいろ変更したいことがあって電話しました。"},
+    {"speaker": "operator", "text": "かしこまりました。どのようなご変更でしょうか。"},
+    {"speaker": "customer", "text": "実は来月転職して、それに合わせて引っ越すことになったんです。"},
+    {"speaker": "operator", "text": "ご転職とお引越しですね。新しいお仕事とご住所は決まっていますか。"},
+    {"speaker": "customer", "text": "はい、大阪の会社に転職が決まって、大阪市内に引っ越します。"},
+    {"speaker": "operator", "text": "大阪にお引越しですね。現在の光回線は解約になりますが、大阪でも当社のサービスをご利用いただけます。"},
+    {"speaker": "customer", "text": "引き続きお願いしたいです。あと、転職先はリモートワークが多いので、自宅のネット環境を強化したいんですが。"},
+    {"speaker": "operator", "text": "リモートワーク用でしたら、高速プランがおすすめです。新居の住所で工事日程を調整いたします。"},
+    {"speaker": "customer", "text": "お願いします。3月1日から新居に住む予定です。"}
+  ],
+  "metadata": {
+    "event_types": ["引っ越し", "就職・転職"],
+    "detection_type": "explicit",
+    "difficulty": "medium",
+    "note": "複数ライフイベント同時検出ケース"
+  }
+}

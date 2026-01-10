@@ -1,0 +1,23 @@
+{
+  "call_id": "CALL-2025-01-10-00010",
+  "customer_id": "C-10010",
+  "call_date": "2025-01-10",
+  "call_time": "17:20:00",
+  "duration_seconds": 350,
+  "call_reason": "端末購入相談",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "タブレットを追加で契約したいんですが。"},
+    {"speaker": "operator", "text": "タブレットの追加契約ですね。どのような用途でお使いになりますか。"},
+    {"speaker": "customer", "text": "息子の勉強用です。来年から受験なので、オンライン塾を使いたいって言っていて。"},
+    {"speaker": "operator", "text": "受験勉強用ですね。タブレット学習には大きめの画面がおすすめです。"},
+    {"speaker": "customer", "text": "どのくらいの容量が必要ですか？動画授業をよく見るみたいなんですが。"},
+    {"speaker": "operator", "text": "動画視聴が多いのでしたら、データ容量20GB以上のプランがおすすめです。ご自宅にWi-Fi環境があれば、容量を抑えることも可能です。"},
+    {"speaker": "customer", "text": "家ではWi-Fi使えるので、外出先用に小さめのプランでいいかな。"}
+  ],
+  "metadata": {
+    "event_type": "進学（子供）",
+    "detection_type": "implicit",
+    "difficulty": "hard"
+  }
+}

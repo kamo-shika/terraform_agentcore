@@ -1,0 +1,23 @@
+{
+  "call_id": "CALL-2025-01-10-00008",
+  "customer_id": "C-10008",
+  "call_date": "2025-01-10",
+  "call_time": "12:00:00",
+  "duration_seconds": 360,
+  "call_reason": "オプション追加",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "モバイルWi-Fiのレンタルって、やっていますか？"},
+    {"speaker": "operator", "text": "はい、ポケットWi-Fiのレンタルサービスがございます。どのような用途でご検討でしょうか。"},
+    {"speaker": "customer", "text": "来月から新しい職場に通うことになったんですが、通勤時間が長くなるので、電車の中でも仕事したいんです。"},
+    {"speaker": "operator", "text": "通勤中のお仕事用ですね。月額3,980円で無制限プランがございます。"},
+    {"speaker": "customer", "text": "研修期間中は特に使いそうなので、とりあえず3ヶ月契約できますか？"},
+    {"speaker": "operator", "text": "はい、3ヶ月からのご契約が可能です。"},
+    {"speaker": "customer", "text": "じゃあお願いします。"}
+  ],
+  "metadata": {
+    "event_type": "就職・転職",
+    "detection_type": "implicit",
+    "difficulty": "medium"
+  }
+}
