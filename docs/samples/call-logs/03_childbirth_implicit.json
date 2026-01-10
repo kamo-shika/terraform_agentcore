@@ -1,0 +1,23 @@
+{
+  "call_id": "CALL-2025-01-10-00006",
+  "customer_id": "C-10006",
+  "call_date": "2025-01-10",
+  "call_time": "13:10:00",
+  "duration_seconds": 340,
+  "call_reason": "料金プラン相談",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "料金プランの見直しをしたいのですが。"},
+    {"speaker": "operator", "text": "プランの見直しですね。現在のご利用状況をお聞かせいただけますか。"},
+    {"speaker": "customer", "text": "最近育休に入って、家にいることが多くなったので、外でのデータ通信があまり必要なくなって。"},
+    {"speaker": "operator", "text": "なるほど、ご自宅での利用が中心になられたんですね。"},
+    {"speaker": "customer", "text": "はい、しばらくは家で子供と過ごすことになりそうなので、安いプランに変えたいんです。"},
+    {"speaker": "operator", "text": "でしたら、データ容量が少なめで月額料金がお安いライトプランがおすすめです。"},
+    {"speaker": "customer", "text": "それでお願いします。"}
+  ],
+  "metadata": {
+    "event_type": "出産・子育て",
+    "detection_type": "implicit",
+    "difficulty": "medium"
+  }
+}

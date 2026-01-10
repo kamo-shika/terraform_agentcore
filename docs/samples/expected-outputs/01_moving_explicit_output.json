@@ -1,0 +1,39 @@
+{
+  "step1_output": {
+    "call_id": "CALL-2025-01-10-00001",
+    "customer_id": "C-10001",
+    "call_date": "2025-01-10",
+    "detected_events": [
+      {
+        "event_type": "引っ越し",
+        "timing": "1ヶ月以内",
+        "confidence": "high",
+        "evidence": "来月引っ越すことになったので、インターネットの手続きについて確認したい"
+      }
+    ],
+    "no_event_detected": false
+  },
+  "step2_output": {
+    "customer_id": "C-10001",
+    "current_event": {
+      "event_type": "引っ越し",
+      "confidence": "high"
+    },
+    "historical_context": {
+      "previous_events": [],
+      "pattern_analysis": "初回検出のため、過去のパターンは不明。新規イベントとして記録。"
+    },
+    "is_new_event": true,
+    "related_to_previous": false
+  },
+  "step3_output": {
+    "customer_id": "C-10001",
+    "call_date": "2025-01-10",
+    "recommendations": [
+      {"action": "光回線移転手続きの案内", "priority": "high", "reason": "顧客から移転の問い合わせあり"},
+      {"action": "でんき・ガスセット割の提案", "priority": "medium", "reason": "新居でのインフラ一括契約の機会"},
+      {"action": "引越し特典キャンペーンの案内", "priority": "low", "reason": "引越し時期の顧客向けキャンペーン"}
+    ],
+    "life_stage_summary": "転居準備期"
+  }
+}

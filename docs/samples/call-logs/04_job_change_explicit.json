@@ -1,0 +1,24 @@
+{
+  "call_id": "CALL-2025-01-10-00007",
+  "customer_id": "C-10007",
+  "call_date": "2025-01-10",
+  "call_time": "18:30:00",
+  "duration_seconds": 290,
+  "call_reason": "プラン変更",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "4月から転職するんですが、プランを見直したいです。"},
+    {"speaker": "operator", "text": "ご転職されるんですね。どのような変更をご希望でしょうか。"},
+    {"speaker": "customer", "text": "今度の会社はリモートワークが多いらしくて、自宅のネット環境を強化したいんです。"},
+    {"speaker": "operator", "text": "リモートワーク用でしたら、光回線の高速プランがおすすめです。"},
+    {"speaker": "customer", "text": "今はマンションタイプなんですが、速度は上げられますか？"},
+    {"speaker": "operator", "text": "はい、マンションタイプでも1Gbpsのプランにアップグレード可能です。"},
+    {"speaker": "customer", "text": "じゃあそれでお願いします。4月までに工事できますか？"},
+    {"speaker": "operator", "text": "3月中に工事可能です。日程を調整いたしましょう。"}
+  ],
+  "metadata": {
+    "event_type": "就職・転職",
+    "detection_type": "explicit",
+    "difficulty": "easy"
+  }
+}

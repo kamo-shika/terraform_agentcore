@@ -1,0 +1,23 @@
+{
+  "call_id": "CALL-2025-01-10-00001",
+  "customer_id": "C-10001",
+  "call_date": "2025-01-10",
+  "call_time": "10:15:00",
+  "duration_seconds": 320,
+  "call_reason": "契約内容の確認",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。本日はどのようなご用件でしょうか。"},
+    {"speaker": "customer", "text": "来月引っ越すことになったので、インターネットの手続きについて確認したいのですが。"},
+    {"speaker": "operator", "text": "ご引越しですね、承知いたしました。新しいご住所はお決まりでしょうか。"},
+    {"speaker": "customer", "text": "はい、東京都渋谷区の新しいマンションに2月15日から住む予定です。"},
+    {"speaker": "operator", "text": "2月15日からのお引越しですね。現在ご利用いただいている光回線サービスを新居でも継続されますか。"},
+    {"speaker": "customer", "text": "はい、そのまま継続したいです。手続きはどうすればいいですか。"},
+    {"speaker": "operator", "text": "移転のお手続きを承ります。新居の住所と入居日を確認させていただき、工事日程を調整いたします。"},
+    {"speaker": "customer", "text": "わかりました。よろしくお願いします。"}
+  ],
+  "metadata": {
+    "event_type": "引っ越し",
+    "detection_type": "explicit",
+    "difficulty": "easy"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "call_id": "CALL-2025-01-10-00009",
+  "customer_id": "C-10009",
+  "call_date": "2025-01-10",
+  "call_time": "16:45:00",
+  "duration_seconds": 410,
+  "call_reason": "新規契約相談",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "子供が4月から中学校に入学するので、スマホを持たせようと思っています。"},
+    {"speaker": "operator", "text": "ご入学おめでとうございます。お子様用のスマホですね。"},
+    {"speaker": "customer", "text": "学割とかありますか？私も〇〇通信を使っているんですが。"},
+    {"speaker": "operator", "text": "はい、学割がございます。さらにご家族でご契約いただくと家族割も適用されます。"},
+    {"speaker": "customer", "text": "両方使えるんですか？"},
+    {"speaker": "operator", "text": "はい、併用可能です。学割で基本料金が1年間無料、家族割でさらに月々550円お安くなります。"},
+    {"speaker": "customer", "text": "それはお得ですね。申し込みはいつからできますか？"},
+    {"speaker": "operator", "text": "学割は2月から受付開始です。入学前にお手続きいただけます。"}
+  ],
+  "metadata": {
+    "event_type": "進学（子供）",
+    "detection_type": "explicit",
+    "difficulty": "easy"
+  }
+}

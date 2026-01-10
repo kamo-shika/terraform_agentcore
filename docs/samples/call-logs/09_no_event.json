@@ -1,0 +1,26 @@
+{
+  "call_id": "CALL-2025-01-10-00016",
+  "customer_id": "C-10016",
+  "call_date": "2025-01-10",
+  "call_time": "09:30:00",
+  "duration_seconds": 180,
+  "call_reason": "料金確認",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "今月の請求金額を確認したいのですが。"},
+    {"speaker": "operator", "text": "ご請求金額の確認ですね。お客様番号をお伺いしてもよろしいでしょうか。"},
+    {"speaker": "customer", "text": "C-10016です。"},
+    {"speaker": "operator", "text": "確認いたしました。今月のご請求金額は8,250円でございます。"},
+    {"speaker": "customer", "text": "先月と同じくらいですか？"},
+    {"speaker": "operator", "text": "はい、先月は8,140円でしたので、ほぼ同額でございます。"},
+    {"speaker": "customer", "text": "わかりました。ありがとうございます。"},
+    {"speaker": "operator", "text": "他にご不明な点はございますか。"},
+    {"speaker": "customer", "text": "大丈夫です。"}
+  ],
+  "metadata": {
+    "event_type": null,
+    "detection_type": "none",
+    "difficulty": "easy",
+    "note": "ライフイベントなしのケース（ノイズ除去用）"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "call_id": "CALL-2025-01-10-00011",
+  "customer_id": "C-10011",
+  "call_date": "2025-01-10",
+  "call_time": "10:00:00",
+  "duration_seconds": 480,
+  "call_reason": "プラン見直し",
+  "transcript": [
+    {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
+    {"speaker": "customer", "text": "3月で定年退職するので、料金プランを見直したいのですが。"},
+    {"speaker": "operator", "text": "ご退職されるんですね。お疲れ様でございました。プランの見直しですね。"},
+    {"speaker": "customer", "text": "今は会社の補助があって高いプランを使っていたんですが、退職後は自己負担になるので。"},
+    {"speaker": "operator", "text": "なるほど。60歳以上のお客様には、シニア割引がございます。"},
+    {"speaker": "customer", "text": "シニア割引ですか。どのくらい安くなりますか？"},
+    {"speaker": "operator", "text": "月額1,650円の割引が永年適用されます。また、ご利用が少なければ、ライトプランへの変更もおすすめです。"},
+    {"speaker": "customer", "text": "退職後はあまり外出しないと思うので、ライトプランにシニア割引をつけてください。"},
+    {"speaker": "operator", "text": "かしこまりました。4月からの適用でよろしいでしょうか。"}
+  ],
+  "metadata": {
+    "event_type": "退職・定年",
+    "detection_type": "explicit",
+    "difficulty": "easy"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "step1_output": {
+    "call_id": "CALL-2025-01-10-00003",
+    "customer_id": "C-10003",
+    "call_date": "2025-01-10",
+    "detected_events": [
+      {
+        "event_type": "結婚",
+        "timing": "1ヶ月以内",
+        "confidence": "high",
+        "evidence": "来月結婚するんですが、家族割について教えてください"
+      }
+    ],
+    "no_event_detected": false
+  },
+  "step2_output": {
+    "customer_id": "C-10003",
+    "current_event": {
+      "event_type": "結婚",
+      "confidence": "high"
+    },
+    "historical_context": {
+      "previous_events": [],
+      "pattern_analysis": "初回検出。結婚後は引っ越しや出産などの関連イベントが発生する可能性あり。"
+    },
+    "is_new_event": true,
+    "related_to_previous": false
+  },
+  "step3_output": {
+    "customer_id": "C-10003",
+    "call_date": "2025-01-10",
+    "recommendations": [
+      {"action": "家族割の適用案内", "priority": "high", "reason": "顧客から家族割の問い合わせあり、パートナーも同キャリア利用中"},
+      {"action": "回線追加の提案", "priority": "medium", "reason": "家族増加に伴う追加契約の機会"},
+      {"action": "新生活応援キャンペーン", "priority": "low", "reason": "結婚時期の顧客向けキャンペーン"}
+    ],
+    "life_stage_summary": "新婚期"
+  }
+}
