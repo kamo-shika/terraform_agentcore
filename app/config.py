@@ -13,8 +13,9 @@ import os
 # 定数定義
 # ========================================
 
-# モデルID: 使用するClaude AIモデルの識別子
-MODEL_ID = os.getenv("MODEL_ID", "jp.anthropic.claude-sonnet-4-5-20250929-v1:0")
+# モデルID: 使用するAIモデルの識別子（コスト最適化のためNova 2 Liteを使用）
+# 注意: Nova 2 Liteは推論プロファイルが必要で、日本リージョン用は jp.amazon.nova-2-lite-v1:0 を使用
+MODEL_ID = os.getenv("MODEL_ID", "jp.amazon.nova-2-lite-v1:0")
 
 # リージョン: AWSリソースのデプロイ先リージョン
 REGION = os.getenv("AWS_REGION", "ap-northeast-1")

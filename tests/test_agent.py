@@ -37,7 +37,7 @@ class TestCreateAgent:
 
         # モデルIDはmodel.configから取得
         model_id = agent.model.config.get("model_id")
-        assert model_id == "jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        assert model_id == "jp.amazon.nova-2-lite-v1:0"
 
     def test_create_agent_has_use_aws_tool(self):
         """
