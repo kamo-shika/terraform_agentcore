@@ -46,7 +46,7 @@
 ### デフォルト設定（Makefile）
 - PROJECT_NAME: `agentcore`
 - REGION: `ap-northeast-1`
-- Model: `amazon.nova-lite-v1:0`
+- Model: `jp.amazon.nova-2-lite-v1:0`（Amazon Nova 2 Lite、日本リージョン用推論プロファイル）
 
 ### 設定の変更
 Makefile変数をオーバーライドするか、`terraform/variables.tf`のデフォルトを編集します。
