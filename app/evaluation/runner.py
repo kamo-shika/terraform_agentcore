@@ -387,14 +387,11 @@ def main():
 
         if args.output:
             for i, report in enumerate(reports):
-                all_results.append(
-                    {
-                        "step": step,
-                        "case_name": cases[i].name,
-                        "overall_score": report.overall_score,
-                        "test_passes": report.test_passes,
-                    }
-                )
+                # report.to_dict()で全評価結果（reasonを含む）を取得
+                report_dict = report.to_dict()
+                report_dict["step"] = step
+                report_dict["case_name"] = cases[i].name
+                all_results.append(report_dict)
 
     if args.output and all_results:
         with open(args.output, "w", encoding="utf-8") as f:
