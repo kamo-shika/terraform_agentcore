@@ -23,8 +23,8 @@ class TestCreateRetrievalConfig:
             patch("app.memory.LTM_ENABLED", True),
             patch("app.memory.LTM_SUMMARY_TOP_K", 10),
             patch("app.memory.LTM_SUMMARY_SCORE", 0.3),
-            patch("app.memory.LTM_NAMESPACE", "/file-summaries/{actorId}"),
-            patch("app.memory.ACTOR_STATE_NAMESPACE", "/actor-state/{actorId}"),
+            patch("app.memory.LTM_NAMESPACE", "/call-summaries/{actorId}"),
+            patch("app.memory.ACTOR_STATE_NAMESPACE", "/life-events/{actorId}"),
             patch("app.memory.ACTOR_STATE_TOP_K", 5),
         ):
             from app.memory import create_retrieval_config
@@ -33,12 +33,12 @@ class TestCreateRetrievalConfig:
 
             assert result is not None
             # ファイル要約のNamespaceを含む
-            assert "/file-summaries/{actorId}" in result
-            assert result["/file-summaries/{actorId}"]["top_k"] == 10
-            assert result["/file-summaries/{actorId}"]["relevance_score"] == 0.3
+            assert "/call-summaries/{actorId}" in result
+            assert result["/call-summaries/{actorId}"]["top_k"] == 10
+            assert result["/call-summaries/{actorId}"]["relevance_score"] == 0.3
             # Actor状態のNamespaceも含む
-            assert "/actor-state/{actorId}" in result
-            assert result["/actor-state/{actorId}"]["top_k"] == 5
+            assert "/life-events/{actorId}" in result
+            assert result["/life-events/{actorId}"]["top_k"] == 5
 
     def test_returns_none_when_ltm_disabled(self):
         """
@@ -59,14 +59,14 @@ class TestCreateRetrievalConfig:
             patch("app.memory.LTM_ENABLED", True),
             patch("app.memory.LTM_SUMMARY_TOP_K", 20),
             patch("app.memory.LTM_SUMMARY_SCORE", 0.5),
-            patch("app.memory.LTM_NAMESPACE", "/file-summaries/{actorId}"),
+            patch("app.memory.LTM_NAMESPACE", "/call-summaries/{actorId}"),
         ):
             from app.memory import create_retrieval_config
 
             result = create_retrieval_config()
 
-            assert result["/file-summaries/{actorId}"]["top_k"] == 20
-            assert result["/file-summaries/{actorId}"]["relevance_score"] == 0.5
+            assert result["/call-summaries/{actorId}"]["top_k"] == 20
+            assert result["/call-summaries/{actorId}"]["relevance_score"] == 0.5
 
 
 class TestCreateMemory:
@@ -167,7 +167,7 @@ class TestCreateMemory:
         """
         from app.memory import create_memory
 
-        mock_retrieval_config = {"/file-summaries/{actorId}": {"top_k": 10, "relevance_score": 0.3}}
+        mock_retrieval_config = {"/call-summaries/{actorId}": {"top_k": 10, "relevance_score": 0.3}}
 
         with (
             patch("app.memory.AgentCoreMemorySessionManager") as mock_manager,

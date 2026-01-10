@@ -21,7 +21,7 @@ flowchart TB
         Memory[("AgentCore<br/>Memory")]
     end
 
-    S3In -->|"ファイルアップロード"| Lambda
+    S3In -->|"通話ログアップロード"| Lambda
     Lambda -->|"invoke"| Runtime
     Runtime -->|"実行"| Agent
     Agent -->|"会話履歴保存"| Memory
@@ -52,11 +52,10 @@ AWSが提供するマネージドエージェントホスティングサービ�
 | ファイル | 説明 |
 |---------|------|
 | `app/main.py` | AgentCoreから呼び出される `handler()` 関数 |
-| `app/agent.py` | Strands frameworkを使用したエージェント設定（Claude Sonnet 4.5使用） |
 | `app/config.py` | 設定モジュール（環境変数、バリデーション） |
 | `app/memory.py` | AgentCore Memory統合設定 |
 | `app/tools.py` | カスタムツール（@toolデコレータ付き、エージェントから呼び出し可能） |
-| `app/workflow.py` | S3ファイル要約ワークフロー（3ステップ処理） |
+| `app/workflow.py` | CS通話ログ分析ワークフロー（3ステップ処理） |
 | `app/server.py` | FastAPIサーバー（コンテナ内エンドポイント） |
 | `app/prompts/` | プロンプトテンプレート |
 
@@ -71,7 +70,7 @@ AWSが提供するマネージドエージェントホスティングサービ�
 
 S3イベントをトリガーにAgentCoreを呼び出すLambda関数。
 
-- S3にファイルがアップロードされると起動
+- S3に通話ログがアップロードされると起動
 - AgentCore Runtimeのエンドポイントを呼び出し
 - エージェントのレスポンスをS3に保存（`outputs/`配下）
 
@@ -85,7 +84,7 @@ S3イベントをトリガーにAgentCoreを呼び出すLambda関数。
   {
     "timestamp": "2026-01-03T12:00:00Z",
     "session_id": "bucket_path_to_file",
-    "actor_id": "user-id-from-metadata",
+    "actor_id": "customer-id-from-metadata",
     "source": {
       "bucket": "入力バケット名",
       "key": "入力ファイルキー"
@@ -101,17 +100,17 @@ S3イベントをトリガーにAgentCoreを呼び出すLambda関数。
 .
 ├── app/
 │   ├── main.py          # エントリーポイント（handler関数）
-│   ├── agent.py         # エージェント設定（Claude Sonnet 4.5使用）
 │   ├── config.py        # 設定モジュール（環境変数管理）
 │   ├── memory.py        # AgentCore Memory統合設定
 │   ├── tools.py         # カスタムツール（@toolデコレータ付き）
-│   ├── workflow.py      # S3ファイル要約ワークフロー
+│   ├── workflow.py      # CS通話ログ分析ワークフロー
 │   ├── server.py        # FastAPIサーバー
 │   └── prompts/         # プロンプトテンプレート
 │       └── workflow/
-│           ├── summarize.md  # 要約タスク用
-│           ├── analyze.md    # 分析タスク用
-│           └── profile.md    # プロファイル生成用
+│           ├── system.md    # システムプロンプト
+│           ├── step1.md     # ライフイベント検出用
+│           ├── step2.md     # 履歴照合・パターン分析用
+│           └── step3.md     # レコメンド生成用
 ├── terraform/
 │   ├── agentcore.tf     # AgentCore RuntimeとMemoryリソース
 │   ├── ecr.tf           # ECRリポジトリ
@@ -140,7 +139,7 @@ S3イベントをトリガーにAgentCoreを呼び出すLambda関数。
 
 - `aws_bedrockagentcore_agent_runtime` - AgentCore Runtime
 - `aws_bedrockagentcore_memory` - AgentCore Memory
-- `aws_bedrockagentcore_memory_strategy` - Memory Strategy（ファイル要約・Actor状態追跡）
+- `aws_bedrockagentcore_memory_strategy` - Memory Strategy（通話要約・ライフイベント追跡）
 - エンドポイント設定（DEFAULT, PROD）
 
 ### observability.tf
@@ -164,19 +163,19 @@ S3イベントをトリガーにAgentCoreを呼び出すLambda関数。
 
 ## イベント構造
 
-AgentCoreはエージェントを以下の形式で呼び出します（S3ワークフローモードのみサポート）：
+AgentCoreはエージェントを以下の形式で呼び出します（CS通話ログ分析モードのみサポート）：
 
 ```python
 {
   "input": {
-    "text": "S3ファイルを処理してください"
+    "text": "通話ログを分析してください"
   },
   "s3_info": {
     "bucket": "bucket-name",
-    "key": "path/to/file.txt"
+    "key": "path/to/call-log.txt"
   },
   "sessionId": "session-123",
-  "actorId": "user-123"
+  "actorId": "customer-123"
 }
 ```
 
@@ -198,7 +197,6 @@ Memory機能は以下の2つの方法で利用可能です：
 ```python
 from app.memory import create_memory
 session_manager = create_memory(memory_id, session_id, actor_id)
-agent = create_agent(session_manager=session_manager)
 ```
 
 #### 2. 長期メモリ直接操作（memory.py）
@@ -206,14 +204,14 @@ agent = create_agent(session_manager=session_manager)
 ```python
 from app.memory import retrieve_past_summaries, retrieve_actor_state, save_actor_state
 
-# 過去の要約を取得
+# 過去の通話要約を取得
 summaries = retrieve_past_summaries(memory_id, actor_id, query="検索クエリ")
 
-# Actor状態を取得
+# ライフイベント情報を取得
 states = retrieve_actor_state(memory_id, actor_id)
 
-# Actor状態を保存
-record_id = save_actor_state(memory_id, actor_id, state_text="ユーザーの傾向...")
+# ライフイベント情報を保存
+record_id = save_actor_state(memory_id, actor_id, state_text="ライフイベント情報...")
 ```
 
 ### Memory Strategy
@@ -222,27 +220,27 @@ AgentCore Memoryは2つのMemory Strategyを使用して長期記憶を管理：
 
 | Strategy名 | タイプ | Namespace | 用途 |
 |------------|--------|-----------|------|
-| FileSummaryExtractor | SEMANTIC | `/file-summaries/{actorId}` | S3ファイル要約の蓄積・検索 |
-| ActorStateTracker | USER_PREFERENCE | `/actor-state/{actorId}` | Actorの活動状態と傾向の追跡 |
+| CallSummaryExtractor | SEMANTIC | `/call-summaries/{actorId}` | CS通話ログ要約の蓄積・検索 |
+| LifeEventTracker | USER_PREFERENCE | `/life-events/{actorId}` | ライフイベント検出結果の追跡 |
 
 詳細は `terraform/agentcore.tf` のMemory Strategyリソース定義を参照してください。
 
-### Actor状態追跡
+### ライフイベント追跡
 
-エージェントはファイル処理後に自動的にActor状態を保存します：
+エージェントは通話ログ処理後に自動的にライフイベント情報を保存します：
 
 ```python
 # app/memory.py の主要関数
-retrieve_actor_state()  # Actor状態を取得
-save_actor_state()      # Actor状態を保存
+retrieve_actor_state()  # ライフイベント情報を取得
+save_actor_state()      # ライフイベント情報を保存
 ```
 
 保存される情報：
-- 処理したファイルのキー
-- 参照した過去の要約数
-- 処理結果の概要（500文字以内）
+- 検出されたライフイベント
+- 過去の通話パターンとの関連
+- レコメンド内容
 
-これにより、同じActorの過去の活動パターンを参照しながら処理を行うことができます。
+これにより、同じ顧客の過去のライフイベントを参照しながら処理を行うことができます。
 
 ### オブザーバビリティ
 
@@ -256,21 +254,21 @@ AgentCore Memory・Runtimeはログ・トレース配信設定をサポート：
 
 ## ワークフロー機能
 
-S3ファイルアップロードをトリガーに、3ステップのワークフローを実行します：
+CS通話ログアップロードをトリガーに、3ステップのワークフローを実行します：
 
 ### ワークフロー概要
 
 ```mermaid
 flowchart LR
-    subgraph workflow["S3ワークフロー（3ステップ）"]
+    subgraph workflow["CS通話ログ分析ワークフロー（3ステップ）"]
         direction TB
-        Step1["Step 1<br/>S3ファイル読み取り<br/>→ 要約生成"]
-        Step2["Step 2<br/>過去の要約取得<br/>→ パターン分析"]
-        Step3["Step 3<br/>プロファイル生成<br/>→ メモリ保存"]
+        Step1["Step 1<br/>通話ログ読み取り<br/>→ ライフイベント検出"]
+        Step2["Step 2<br/>過去の通話要約取得<br/>→ 履歴照合・パターン分析"]
+        Step3["Step 3<br/>レコメンド生成<br/>→ メモリ保存"]
         Step1 --> Step2 --> Step3
     end
 
-    S3[("S3<br/>ファイル")] --> Step1
+    S3[("S3<br/>通話ログ")] --> Step1
     Memory[("AgentCore<br/>Memory")] <-.->|"取得/保存"| Step2
     Step3 --> Memory
 
@@ -284,8 +282,8 @@ flowchart LR
 from app.workflow import run_workflow
 
 result = run_workflow(
-    s3_info={"bucket": "bucket-name", "key": "path/to/file.txt"},
-    actor_id="user-123",
+    s3_info={"bucket": "bucket-name", "key": "path/to/call-log.txt"},
+    actor_id="customer-123",
     session_id="session-123",
     memory_id="agentcore_memory-xxx"
 )
@@ -295,9 +293,10 @@ result = run_workflow(
 
 | ファイル | 用途 |
 |---------|------|
-| `app/prompts/workflow/summarize.md` | S3ファイル要約用 |
-| `app/prompts/workflow/analyze.md` | パターン分析用 |
-| `app/prompts/workflow/profile.md` | プロファイル生成用 |
+| `app/prompts/workflow/system.md` | システムプロンプト |
+| `app/prompts/workflow/step1.md` | ライフイベント検出用 |
+| `app/prompts/workflow/step2.md` | 履歴照合・パターン分析用 |
+| `app/prompts/workflow/step3.md` | レコメンド生成用 |
 
 ## ネットワーク設定
 

@@ -41,7 +41,7 @@ def create_retrieval_config() -> dict[str, Any] | None:
     """
     LTM用のRetrievalConfigを作成する。
 
-    LTM_ENABLEDがtrueの場合、過去のファイル要約とActor状態を取得するための
+    LTM_ENABLEDがtrueの場合、過去の通話要約とライフイベント検出結果を取得するための
     RetrievalConfig設定を返す。複数のNamespaceを含む設定を返すことで、
     SessionManagerを通じて自動的に過去情報が注入される。
 
@@ -55,15 +55,15 @@ def create_retrieval_config() -> dict[str, Any] | None:
     # 複数Namespaceの設定を返す
     # これによりSessionManagerが自動的に両方のNamespaceから情報を取得
     return {
-        # 過去のファイル要約を取得するための設定
+        # 過去の通話要約を取得するための設定
         LTM_NAMESPACE: {
             "top_k": LTM_SUMMARY_TOP_K,
             "relevance_score": LTM_SUMMARY_SCORE,
         },
-        # Actor状態（嗜好・傾向）を取得するための設定
+        # ライフイベント検出結果を取得するための設定
         ACTOR_STATE_NAMESPACE: {
             "top_k": ACTOR_STATE_TOP_K,
-            "relevance_score": 0.5,  # Actor状態は広めに取得
+            "relevance_score": 0.5,  # ライフイベントは広めに取得
         },
     }
 
@@ -72,7 +72,7 @@ def create_memory(mem_id: str, session_id: str, actor_id: str) -> AgentCoreMemor
     """
     Strandsエージェント用のAgentCore Memoryセッションマネージャーを作成する。
 
-    LTM_ENABLEDがtrueの場合、過去のファイル要約を取得するための
+    LTM_ENABLEDがtrueの場合、過去の通話要約を取得するための
     RetrievalConfigも設定される。
 
     Args:
@@ -105,7 +105,7 @@ def _resolve_namespace(namespace_template: str, actor_id: str) -> str:
     Namespaceテンプレート内の{actorId}を実際の値に置換する。
 
     Args:
-        namespace_template: Namespaceテンプレート（例: "/file-summaries/{actorId}"）
+        namespace_template: Namespaceテンプレート（例: "/call-summaries/{actorId}"）
         actor_id: 置換するアクターID
 
     Returns:
@@ -121,15 +121,15 @@ def retrieve_past_summaries(
     top_k: int = LTM_SUMMARY_TOP_K,
 ) -> list[dict[str, Any]]:
     """
-    過去のファイル要約をセマンティック検索で取得する。
+    過去の通話要約をセマンティック検索で取得する。
 
     RetrieveMemoryRecords APIを使用して、クエリに関連する
-    過去のファイル要約を検索・取得する。
+    過去の通話要約を検索・取得する。
 
     Args:
         memory_id: AgentCore MemoryのID
-        actor_id: アクターID
-        query: 検索クエリ（ファイル内容やファイル名など）
+        actor_id: アクターID（顧客ID）
+        query: 検索クエリ（通話内容やキーワードなど）
         top_k: 取得する最大件数（デフォルト: LTM_SUMMARY_TOP_K）
 
     Returns:
@@ -178,25 +178,25 @@ def retrieve_past_summaries(
 def retrieve_actor_state(
     memory_id: str,
     actor_id: str,
-    query: str = "直近の活動状態",
+    query: str = "ライフイベント検出結果",
     top_k: int = ACTOR_STATE_TOP_K,
 ) -> list[dict[str, Any]]:
     """
-    Actorの活動状態をセマンティック検索で取得する。
+    顧客のライフイベント検出結果をセマンティック検索で取得する。
 
-    RetrieveMemoryRecords APIを使用して、Actor状態Namespaceから
-    過去の活動状態を検索・取得する。
+    RetrieveMemoryRecords APIを使用して、ライフイベントNamespaceから
+    過去の検出結果を検索・取得する。
 
     Args:
         memory_id: AgentCore MemoryのID
-        actor_id: アクターID
-        query: 検索クエリ（デフォルト: "直近の活動状態"）
+        actor_id: アクターID（顧客ID）
+        query: 検索クエリ（デフォルト: "ライフイベント検出結果"）
         top_k: 取得する最大件数（デフォルト: ACTOR_STATE_TOP_K）
 
     Returns:
         メモリレコードのリスト。各レコードは以下のキーを含む:
         - memoryRecordId: レコードID
-        - content: 状態内容
+        - content: ライフイベント内容
         - relevanceScore: 関連度スコア
 
     Raises:
@@ -242,15 +242,15 @@ def save_actor_state(
     state_text: str,
 ) -> str | None:
     """
-    Actorの活動状態をメモリに保存する。
+    顧客のライフイベント検出結果をメモリに保存する。
 
-    BatchCreateMemoryRecords APIを使用して、新しいActor状態を
+    BatchCreateMemoryRecords APIを使用して、新しいライフイベント情報を
     長期メモリに保存する。
 
     Args:
         memory_id: AgentCore MemoryのID
-        actor_id: アクターID
-        state_text: 保存する状態テキスト
+        actor_id: アクターID（顧客ID）
+        state_text: 保存するライフイベント情報テキスト
 
     Returns:
         作成されたメモリレコードのID、失敗時はNone

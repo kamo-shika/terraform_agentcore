@@ -45,29 +45,29 @@ resource "aws_bedrockagentcore_memory" "main" {
 }
 
 # ==============================================================================
-# Bedrock AgentCore Memory Strategy - Semantic (ファイル要約蓄積)
+# Bedrock AgentCore Memory Strategy - Semantic (通話要約蓄積)
 # ==============================================================================
-# ファイル要約を長期メモリとして蓄積するためのSemantic Memory Strategy
-# ユーザー（actorId）別にファイル要約を保存・取得する
-resource "aws_bedrockagentcore_memory_strategy" "file_summary" {
-  name        = "FileSummaryExtractor"
+# CS通話ログの要約を長期メモリとして蓄積するためのSemantic Memory Strategy
+# 顧客（actorId）別に通話要約を保存・取得する
+resource "aws_bedrockagentcore_memory_strategy" "call_summary" {
+  name        = "CallSummaryExtractor"
   memory_id   = aws_bedrockagentcore_memory.main.id
   type        = "SEMANTIC"
-  namespaces  = ["/file-summaries/{actorId}"]
-  description = "S3ファイル要約を蓄積し、過去の要約を統合した出力を可能にするSemantic Memory Strategy"
+  namespaces  = ["/call-summaries/{actorId}"]
+  description = "CS通話ログ要約を蓄積し、過去の通話からライフイベントを検索可能にするSemantic Memory Strategy"
 }
 
 # ==============================================================================
-# Bedrock AgentCore Memory Strategy - UserPreference (Actor状態追跡)
+# Bedrock AgentCore Memory Strategy - UserPreference (ライフイベント追跡)
 # ==============================================================================
-# Actorの活動状態・傾向を長期メモリとして蓄積するためのUserPreference Memory Strategy
-# ファイル処理の傾向やActorの活動パターンを保存・取得する
-resource "aws_bedrockagentcore_memory_strategy" "actor_state" {
-  name        = "ActorStateTracker"
+# 顧客のライフイベント検出結果を長期メモリとして蓄積するためのUserPreference Memory Strategy
+# 引っ越し、結婚、出産などのライフイベントとレコメンドを保存・取得する
+resource "aws_bedrockagentcore_memory_strategy" "life_events" {
+  name        = "LifeEventTracker"
   memory_id   = aws_bedrockagentcore_memory.main.id
   type        = "USER_PREFERENCE"
-  namespaces  = ["/actor-state/{actorId}"]
-  description = "Actorの活動状態と傾向を追跡し、直近の動きをまとめて保存するUserPreference Memory Strategy"
+  namespaces  = ["/life-events/{actorId}"]
+  description = "顧客のライフイベント検出結果とレコメンドを統合・要約するUserPreference Memory Strategy"
 }
 
 # ==============================================================================
