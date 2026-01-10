@@ -149,3 +149,172 @@ class TestSummarizePrompt:
         prompt = _load_summarize_prompt()
         # プロンプトにはS3直接取得の指示が含まれない
         assert "s3からファイルを取得" not in prompt.lower(), "プロンプトにS3直接取得指示が含まれてはいけない"
+
+
+class TestCreateStep2Cases:
+    """Step 2テストケース作成のテスト"""
+
+    def test_creates_non_empty_list(self):
+        """テストケースが空でないリストを返すことを確認"""
+        from app.evaluation.cases import create_step2_cases
+
+        cases = create_step2_cases()
+        assert len(cases) > 0
+
+    def test_cases_have_required_fields(self):
+        """各ケースが必須フィールドを持つことを確認"""
+        from app.evaluation.cases import create_step2_cases
+
+        cases = create_step2_cases()
+        for case in cases:
+            assert case.name, "ケース名が必要"
+            assert case.input is not None, "入力が必要"
+            assert "current_summary" in case.input, "current_summaryが入力に含まれる必要がある"
+            assert "past_summaries" in case.input, "past_summariesが入力に含まれる必要がある"
+
+    def test_cases_have_metadata(self):
+        """各ケースにメタデータが含まれることを確認"""
+        from app.evaluation.cases import create_step2_cases
+
+        cases = create_step2_cases()
+        for case in cases:
+            assert case.metadata is not None, "メタデータが必要"
+            assert "category" in case.metadata, "categoryがメタデータに含まれる必要がある"
+
+
+class TestCreateStep2Evaluators:
+    """Step 2評価器作成のテスト"""
+
+    def test_creates_evaluators(self):
+        """評価器が作成されることを確認"""
+        from app.evaluation.evaluators import create_step2_evaluators
+
+        evaluators = create_step2_evaluators()
+        assert len(evaluators) >= 1
+
+    def test_includes_output_evaluator(self):
+        """OutputEvaluatorが含まれることを確認"""
+        from strands_evals.evaluators import OutputEvaluator
+
+        from app.evaluation.evaluators import create_step2_evaluators
+
+        evaluators = create_step2_evaluators()
+        assert any(isinstance(e, OutputEvaluator) for e in evaluators)
+
+    def test_output_evaluator_has_rubric(self):
+        """OutputEvaluatorにルブリックが設定されていることを確認"""
+        from strands_evals.evaluators import OutputEvaluator
+
+        from app.evaluation.evaluators import create_step2_evaluators
+
+        evaluators = create_step2_evaluators()
+        output_evaluator = next(e for e in evaluators if isinstance(e, OutputEvaluator))
+        assert output_evaluator.rubric, "ルブリックが設定されている必要がある"
+        # ルブリックにパターン分析の評価基準が含まれていることを確認
+        assert "洞察" in output_evaluator.rubric or "パターン" in output_evaluator.rubric
+
+
+class TestCreateStep3Cases:
+    """Step 3テストケース作成のテスト"""
+
+    def test_creates_non_empty_list(self):
+        """テストケースが空でないリストを返すことを確認"""
+        from app.evaluation.cases import create_step3_cases
+
+        cases = create_step3_cases()
+        assert len(cases) > 0
+
+    def test_cases_have_required_fields(self):
+        """各ケースが必須フィールドを持つことを確認"""
+        from app.evaluation.cases import create_step3_cases
+
+        cases = create_step3_cases()
+        for case in cases:
+            assert case.name, "ケース名が必要"
+            assert case.input is not None, "入力が必要"
+            assert "pattern_analysis" in case.input, "pattern_analysisが入力に含まれる必要がある"
+
+    def test_cases_have_metadata(self):
+        """各ケースにメタデータが含まれることを確認"""
+        from app.evaluation.cases import create_step3_cases
+
+        cases = create_step3_cases()
+        for case in cases:
+            assert case.metadata is not None, "メタデータが必要"
+            assert "category" in case.metadata, "categoryがメタデータに含まれる必要がある"
+
+
+class TestCreateStep3Evaluators:
+    """Step 3評価器作成のテスト"""
+
+    def test_creates_evaluators(self):
+        """評価器が作成されることを確認"""
+        from app.evaluation.evaluators import create_step3_evaluators
+
+        evaluators = create_step3_evaluators()
+        assert len(evaluators) >= 1
+
+    def test_includes_output_evaluator(self):
+        """OutputEvaluatorが含まれることを確認"""
+        from strands_evals.evaluators import OutputEvaluator
+
+        from app.evaluation.evaluators import create_step3_evaluators
+
+        evaluators = create_step3_evaluators()
+        assert any(isinstance(e, OutputEvaluator) for e in evaluators)
+
+    def test_output_evaluator_has_rubric(self):
+        """OutputEvaluatorにルブリックが設定されていることを確認"""
+        from strands_evals.evaluators import OutputEvaluator
+
+        from app.evaluation.evaluators import create_step3_evaluators
+
+        evaluators = create_step3_evaluators()
+        output_evaluator = next(e for e in evaluators if isinstance(e, OutputEvaluator))
+        assert output_evaluator.rubric, "ルブリックが設定されている必要がある"
+        # ルブリックにプロファイル生成の評価基準が含まれていることを確認
+        assert "有用性" in output_evaluator.rubric or "プロファイル" in output_evaluator.rubric
+
+
+class TestStep2Step3Runner:
+    """Step 2/3評価実行のテスト"""
+
+    def test_run_step2_evaluation_function_exists(self):
+        """run_step2_evaluation 関数が存在することを確認"""
+        from app.evaluation.runner import run_step2_evaluation
+
+        assert callable(run_step2_evaluation)
+
+    def test_run_step3_evaluation_function_exists(self):
+        """run_step3_evaluation 関数が存在することを確認"""
+        from app.evaluation.runner import run_step3_evaluation
+
+        assert callable(run_step3_evaluation)
+
+
+class TestStep2Step3PackageExports:
+    """Step 2/3パッケージエクスポートのテスト"""
+
+    def test_step2_exports(self):
+        """Step 2関連の関数がエクスポートされることを確認"""
+        from app.evaluation import (
+            create_step2_cases,
+            create_step2_evaluators,
+            run_step2_evaluation,
+        )
+
+        assert callable(create_step2_cases)
+        assert callable(create_step2_evaluators)
+        assert callable(run_step2_evaluation)
+
+    def test_step3_exports(self):
+        """Step 3関連の関数がエクスポートされることを確認"""
+        from app.evaluation import (
+            create_step3_cases,
+            create_step3_evaluators,
+            run_step3_evaluation,
+        )
+
+        assert callable(create_step3_cases)
+        assert callable(create_step3_evaluators)
+        assert callable(run_step3_evaluation)

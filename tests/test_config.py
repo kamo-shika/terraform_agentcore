@@ -18,12 +18,12 @@ class TestDefaultValues:
         """
         MODEL_IDのデフォルト値が正しいことを確認。
 
-        環境変数が設定されていない場合、日本リージョンのClaude Sonnet 4.5が
+        環境変数が設定されていない場合、コスト最適化のためNova 2 Lite（日本リージョン用）が
         デフォルトとして使用される。
         """
         from app.config import MODEL_ID
 
-        assert MODEL_ID == "jp.anthropic.claude-sonnet-4-5-20250929-v1:0"
+        assert MODEL_ID == "jp.amazon.nova-2-lite-v1:0"
 
     def test_default_region(self, clean_env):
         """
