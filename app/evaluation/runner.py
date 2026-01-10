@@ -8,9 +8,13 @@ import argparse
 import json
 
 from strands import Agent
+from strands.models import BedrockModel
 from strands_evals import Case, Experiment
 
-from ..config import MODEL_ID
+from ..config import MODEL_ID, REGION
+
+# Nova 2 Liteのmax_tokens設定（デフォルトでは小さいため明示的に設定）
+EVAL_MAX_TOKENS = 4096
 from .cases import create_step1_cases, create_step2_cases, create_step3_cases
 from .evaluators import create_step1_evaluators, create_step2_evaluators, create_step3_evaluators
 
@@ -44,8 +48,14 @@ def _create_task_function():
             要約結果の文字列
         """
         # エージェントを作成（ツールなしで直接要約）
+        # Nova 2 Liteはmax_tokensの明示的な設定が必要
+        bedrock_model = BedrockModel(
+            model_id=MODEL_ID,
+            region_name=REGION,
+            max_tokens=EVAL_MAX_TOKENS,
+        )
         agent = Agent(
-            model=MODEL_ID,
+            model=bedrock_model,
             system_prompt=system_prompt,
             tools=[],  # 評価時はツールなしで直接ファイル内容を渡す
             callback_handler=None,  # コールバックを無効化
@@ -138,8 +148,14 @@ def _create_step2_task_function():
             パターン分析結果の文字列
         """
         # エージェントを作成（ツールなしで直接分析）
+        # Nova 2 Liteはmax_tokensの明示的な設定が必要
+        bedrock_model = BedrockModel(
+            model_id=MODEL_ID,
+            region_name=REGION,
+            max_tokens=EVAL_MAX_TOKENS,
+        )
         agent = Agent(
-            model=MODEL_ID,
+            model=bedrock_model,
             system_prompt=system_prompt,
             tools=[],
             callback_handler=None,
@@ -233,8 +249,14 @@ def _create_step3_task_function():
             プロファイル生成結果の文字列
         """
         # エージェントを作成（ツールなしで直接生成）
+        # Nova 2 Liteはmax_tokensの明示的な設定が必要
+        bedrock_model = BedrockModel(
+            model_id=MODEL_ID,
+            region_name=REGION,
+            max_tokens=EVAL_MAX_TOKENS,
+        )
         agent = Agent(
-            model=MODEL_ID,
+            model=bedrock_model,
             system_prompt=system_prompt,
             tools=[],
             callback_handler=None,
