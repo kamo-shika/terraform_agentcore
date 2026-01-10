@@ -113,8 +113,8 @@ ci-test:
 
 # --- Evaluation (LLM-as-a-Judge) ---
 eval:
-	@echo "Running full evaluation..."
-	uv run python -m app.evaluation.runner
+	@echo "Running full evaluation (all steps)..."
+	uv run python -m app.evaluation.runner --all
 
 eval-step1:
 	@echo "Running Step 1 (summarize) evaluation..."

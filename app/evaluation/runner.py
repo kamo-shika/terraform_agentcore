@@ -6,6 +6,7 @@ CLIエントリーポイントとして `python -m app.evaluation.runner` で実
 
 import argparse
 import json
+import sys
 
 from strands import Agent
 from strands.models import BedrockModel
@@ -13,10 +14,25 @@ from strands_evals import Case, Experiment
 
 from ..config import MODEL_ID, REGION
 
-# Nova 2 Liteのmax_tokens設定（デフォルトでは小さいため明示的に設定）
-EVAL_MAX_TOKENS = 4096
 from .cases import create_step1_cases, create_step2_cases, create_step3_cases
 from .evaluators import create_step1_evaluators, create_step2_evaluators, create_step3_evaluators
+
+# Nova 2 Liteのmax_tokens設定（デフォルトでは小さいため明示的に設定）
+EVAL_MAX_TOKENS = 4096
+
+
+def _should_use_static_display() -> bool:
+    """
+    評価レポートを静的表示するかどうかを判定する。
+
+    Richのインタラクティブ表示は実際のTTYでのみ動作する。
+    Claude Code等の非TTY環境では静的表示を使用する。
+
+    Returns:
+        True: 静的表示を使用（非TTY環境）
+        False: インタラクティブ表示を使用（TTY環境）
+    """
+    return not sys.stdin.isatty()
 
 
 def _load_summarize_prompt() -> str:
@@ -114,7 +130,7 @@ def run_step1_evaluation(
         print("評価完了")
         for i, report in enumerate(reports):
             print(f"\n[ケース {i + 1}] {cases[i].name}")
-            report.run_display()
+            report.run_display(static=_should_use_static_display())
 
     return reports
 
@@ -215,7 +231,7 @@ def run_step2_evaluation(
         print("評価完了")
         for i, report in enumerate(reports):
             print(f"\n[ケース {i + 1}] {cases[i].name}")
-            report.run_display()
+            report.run_display(static=_should_use_static_display())
 
     return reports
 
@@ -315,7 +331,7 @@ def run_step3_evaluation(
         print("評価完了")
         for i, report in enumerate(reports):
             print(f"\n[ケース {i + 1}] {cases[i].name}")
-            report.run_display()
+            report.run_display(static=_should_use_static_display())
 
     return reports
 
