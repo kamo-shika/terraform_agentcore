@@ -15,17 +15,16 @@
 
 ### アプリケーション構造
 - `app/main.py` - AgentCore Runtimeから呼び出される`handler()`関数を持つエントリーポイント
-- `app/agent.py` - Strandsフレームワークを使用したエージェント設定（Claude Sonnet 4.5モデル）
 - `app/config.py` - アプリケーション設定（環境変数、LTM設定、ロギング）
 - `app/memory.py` - AgentCore Memoryの統合設定（セッション管理、LTM取得・保存）
 - `app/tools.py` - カスタムツール（@toolデコレータ付き、エージェントから呼び出し可能）
-- `app/workflow.py` - S3ファイル要約ワークフロー（3ステップ処理）
+- `app/workflow.py` - CS通話ログ分析ワークフロー（3ステップ処理）
 - `app/server.py` - ローカル開発用HTTPサーバー
 - `app/prompts/` - プロンプトテンプレート
   - `workflow/system.md` - ワークフロー用システムプロンプト
-  - `workflow/step1.md` - Step 1: S3ファイル要約用
-  - `workflow/step2.md` - Step 2: パターン分析用
-  - `workflow/step3.md` - Step 3: プロファイル生成用
+  - `workflow/step1.md` - Step 1: ライフイベント検出用
+  - `workflow/step2.md` - Step 2: 履歴照合・パターン分析用
+  - `workflow/step3.md` - Step 3: レコメンド生成用
 
 ### インフラストラクチャ（Terraform）
 - `terraform/agentcore.tf` - AgentCore RuntimeとMemoryリソース
@@ -35,19 +34,19 @@
 - `terraform/variables.tf` - プロジェクト設定（デフォルトは`ap-northeast-1`）
 
 ### 処理モード
-**S3ワークフローモード**: S3ファイルアップロードをトリガーにシングルエージェント方式で3ステップのワークフローを実行
+**CS通話ログ分析モード**: CS通話ログをトリガーにシングルエージェント方式で3ステップのワークフローを実行
 - 同一エージェントインスタンスを3回呼び出し、コンテキストを保持
-- Step 1: S3ファイル読み取り・要約
-- Step 2: 過去の要約を取得・パターン分析
-- Step 3: ユーザープロファイル生成
-- SessionManagerによる会話履歴の自動永続化とMemory Strategyによる嗜好自動抽出
+- Step 1: 通話ログからライフイベントを検出
+- Step 2: 過去の通話要約と照合・パターン分析
+- Step 3: 顧客向けレコメンド生成
+- SessionManagerによる会話履歴の自動永続化とMemory Strategyによるライフイベント自動抽出
 
 ## 設定
 
 ### デフォルト設定（Makefile）
 - PROJECT_NAME: `agentcore`
 - REGION: `ap-northeast-1`
-- Model: `jp.anthropic.claude-sonnet-4-5-20250929-v1:0`（日本リージョンエンドポイント）
+- Model: `amazon.nova-lite-v1:0`
 
 ### 設定の変更
 Makefile変数をオーバーライドするか、`terraform/variables.tf`のデフォルトを編集します。
@@ -60,7 +59,6 @@ Makefile変数をオーバーライドするか、`terraform/variables.tf`のデ
 ```python
 from app.memory import create_memory
 session_manager = create_memory(memory_id, session_id, actor_id)
-agent = create_agent(session_manager=session_manager)
 ```
 
 **長期メモリ直接操作（memory.py）**
@@ -69,12 +67,12 @@ from app.memory import retrieve_past_summaries, retrieve_actor_state, save_actor
 
 summaries = retrieve_past_summaries(memory_id, actor_id, query="検索クエリ")
 states = retrieve_actor_state(memory_id, actor_id)
-record_id = save_actor_state(memory_id, actor_id, state_text="ユーザーの傾向...")
+record_id = save_actor_state(memory_id, actor_id, state_text="ライフイベント情報...")
 ```
 
 **Namespace設計**:
-- `/file-summaries/{actorId}` - ファイル要約の保存（Semantic Strategy）
-- `/actor-state/{actorId}` - ユーザープロファイルの保存（User Preference Strategy）
+- `/call-summaries/{actorId}` - 通話要約の保存（Semantic Strategy）
+- `/life-events/{actorId}` - ライフイベント検出結果の保存（User Preference Strategy）
 
 ### ワークフロー機能
 
@@ -82,8 +80,8 @@ record_id = save_actor_state(memory_id, actor_id, state_text="ユーザーの傾
 from app.workflow import run_workflow
 
 result = run_workflow(
-    s3_info={"bucket": "bucket-name", "key": "path/to/file.txt"},
-    actor_id="user-123",
+    s3_info={"bucket": "bucket-name", "key": "path/to/call-log.txt"},
+    actor_id="customer-123",
     session_id="session-123",
     memory_id="agentcore_memory-xxx"
 )
@@ -96,14 +94,14 @@ AgentCoreは以下の形式のイベントで呼び出します：
 ```python
 {
   "input": {
-    "text": "S3ファイルを処理してください"
+    "text": "通話ログを分析してください"
   },
   "s3_info": {
     "bucket": "bucket-name",
-    "key": "path/to/file.txt"
+    "key": "path/to/call-log.txt"
   },
   "sessionId": "session-123",
-  "actorId": "user-123"
+  "actorId": "customer-123"
 }
 ```
 

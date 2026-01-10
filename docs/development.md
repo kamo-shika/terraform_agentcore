@@ -44,7 +44,6 @@ tests/
 ├── __init__.py              # テストパッケージ
 ├── conftest.py              # 共通フィクスチャとpytest設定
 ├── test_main.py             # app/main.pyのテスト
-├── test_agent.py            # app/agent.pyのテスト
 ├── test_memory.py           # app/memory.pyのテスト
 ├── test_tools.py            # app/tools.pyのテスト（カスタムツール）
 ├── test_workflow.py         # app/workflow.pyのテスト（ワークフロー）
@@ -169,16 +168,25 @@ git pull origin main
 
 ### ツールの追加
 
-`app/agent.py` を編集し、`tools=[]` パラメータにツールを追加します。
+`app/tools.py` を編集し、`@tool` デコレータを使用してツールを追加します。
 
 ```python
-from strands import Agent
-from strands_tools import calculator, web_search
+from strands import tool
 
-agent = Agent(
-    model="jp.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    tools=[calculator, web_search],  # ツールを追加
-)
+@tool
+def my_custom_tool(param1: str, param2: int) -> str:
+    """
+    カスタムツールの説明。
+
+    Args:
+        param1: パラメータ1の説明
+        param2: パラメータ2の説明
+
+    Returns:
+        処理結果
+    """
+    # ツールの処理
+    return result
 ```
 
 利用可能なツールは `strands-agents-tools` パッケージを参照してください。
@@ -192,7 +200,6 @@ Memory機能は以下の2つの方法で利用可能です。
 ```python
 from app.memory import create_memory
 session_manager = create_memory(memory_id, session_id, actor_id)
-agent = create_agent(session_manager=session_manager)
 ```
 
 #### 2. 長期メモリ直接操作（memory.py）
@@ -200,33 +207,33 @@ agent = create_agent(session_manager=session_manager)
 ```python
 from app.memory import retrieve_past_summaries, retrieve_actor_state, save_actor_state
 
-# 過去の要約を取得
+# 過去の通話要約を取得
 summaries = retrieve_past_summaries(memory_id, actor_id, query="検索クエリ")
 
-# Actor状態を取得
+# ライフイベント情報を取得
 states = retrieve_actor_state(memory_id, actor_id)
 
-# Actor状態を保存
-record_id = save_actor_state(memory_id, actor_id, state_text="ユーザーの傾向...")
+# ライフイベント情報を保存
+record_id = save_actor_state(memory_id, actor_id, state_text="ライフイベント情報...")
 ```
 
 #### Namespace設計
 
 | Namespace | Strategy | 用途 |
 |-----------|----------|------|
-| `/file-summaries/{actorId}` | Semantic Strategy | ファイル要約の保存 |
-| `/actor-state/{actorId}` | User Preference Strategy | ユーザープロファイルの保存 |
+| `/call-summaries/{actorId}` | Semantic Strategy | 通話要約の保存 |
+| `/life-events/{actorId}` | User Preference Strategy | ライフイベント情報の保存 |
 
 ### ワークフロー機能
 
-S3ファイルアップロードをトリガーに、3ステップのワークフローを実行します。
+CS通話ログアップロードをトリガーに、3ステップのワークフローを実行します。
 
 ```python
 from app.workflow import run_workflow
 
 result = run_workflow(
-    s3_info={"bucket": "bucket-name", "key": "path/to/file.txt"},
-    actor_id="user-123",
+    s3_info={"bucket": "bucket-name", "key": "path/to/call-log.txt"},
+    actor_id="customer-123",
     session_id="session-123",
     memory_id="agentcore_memory-xxx"
 )
@@ -236,9 +243,10 @@ result = run_workflow(
 
 | ファイル | 用途 |
 |---------|------|
-| `app/prompts/workflow/summarize.md` | 要約タスクのプロンプト |
-| `app/prompts/workflow/analyze.md` | 分析タスクのプロンプト |
-| `app/prompts/workflow/profile.md` | プロファイル生成タスクのプロンプト |
+| `app/prompts/workflow/system.md` | システムプロンプト |
+| `app/prompts/workflow/step1.md` | ライフイベント検出タスクのプロンプト |
+| `app/prompts/workflow/step2.md` | 履歴照合・パターン分析タスクのプロンプト |
+| `app/prompts/workflow/step3.md` | レコメンド生成タスクのプロンプト |
 
 ## サブエージェント
 
