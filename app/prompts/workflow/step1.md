@@ -58,51 +58,51 @@
 以下のJSON形式で出力してください。**JSONのみを出力し、他の説明は含めないでください。**
 
 ```json
-{
+{{
   "call_id": "通話ID",
   "customer_id": "顧客ID",
   "call_date": "通話日",
   "detected_events": [
-    {
+    {{
       "event_type": "ライフイベント種別",
       "timing": "発生時期",
       "confidence": "high/medium/low",
       "evidence": "検出根拠となる顧客の発言（引用）"
-    }
+    }}
   ],
   "no_event_detected": false
-}
+}}
 ```
 
 ### 出力例
 
 **ライフイベントが検出された場合:**
 ```json
-{
+{{
   "call_id": "CALL-2025-01-10-12345",
   "customer_id": "C-98765",
   "call_date": "2025-01-10",
   "detected_events": [
-    {
+    {{
       "event_type": "引っ越し",
       "timing": "1ヶ月以内",
       "confidence": "high",
       "evidence": "来月引っ越すことになったので、インターネットの手続きについて確認したい"
-    }
+    }}
   ],
   "no_event_detected": false
-}
+}}
 ```
 
 **ライフイベントが検出されなかった場合:**
 ```json
-{
+{{
   "call_id": "CALL-2025-01-10-00016",
   "customer_id": "C-10016",
   "call_date": "2025-01-10",
   "detected_events": [],
   "no_event_detected": true
-}
+}}
 ```
 
 ## 注意事項
