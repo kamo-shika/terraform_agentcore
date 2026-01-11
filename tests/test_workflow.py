@@ -38,12 +38,20 @@ class TestRunWorkflow:
             patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
             patch("app.workflow.load_prompt") as mock_load_prompt,
+            patch("app.workflow._read_s3_file") as mock_read_s3,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Step completed"
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
-            mock_load_prompt.return_value = "Test prompt"
+            # 各プロンプトに適切なプレースホルダーを設定
+            mock_load_prompt.side_effect = [
+                "System prompt",
+                "Step1: {call_log} {customer_id} {call_date}",
+                "Step2: {step1_result} {past_summaries}",
+                "Step3: {step2_result} {customer_id} {call_date}",
+            ]
+            mock_read_s3.return_value = "テスト通話ログ"
 
             # Act
             result = run_workflow(
@@ -138,9 +146,9 @@ class TestSingleAgentWorkflow:
         """
         ワークフローがエージェントを3回呼び出すことを確認。
 
-        Step 1: S3ファイル読み取り・要約
+        Step 1: ライフイベント検出
         Step 2: パターン分析
-        Step 3: プロファイル生成
+        Step 3: レコメンド生成
         """
         from app.workflow import run_workflow
 
@@ -155,12 +163,19 @@ class TestSingleAgentWorkflow:
             patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
             patch("app.workflow.load_prompt") as mock_load_prompt,
+            patch("app.workflow._read_s3_file") as mock_read_s3,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Step completed"
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
-            mock_load_prompt.return_value = "Test prompt"
+            mock_load_prompt.side_effect = [
+                "System prompt",
+                "Step1: {call_log} {customer_id} {call_date}",
+                "Step2: {step1_result} {past_summaries}",
+                "Step3: {step2_result} {customer_id} {call_date}",
+            ]
+            mock_read_s3.return_value = "テスト通話ログ"
 
             # Act
             run_workflow(
@@ -193,12 +208,19 @@ class TestSingleAgentWorkflow:
             patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
             patch("app.workflow.load_prompt") as mock_load_prompt,
+            patch("app.workflow._read_s3_file") as mock_read_s3,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Step completed"
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
-            mock_load_prompt.return_value = "Test prompt"
+            mock_load_prompt.side_effect = [
+                "System prompt",
+                "Step1: {call_log} {customer_id} {call_date}",
+                "Step2: {step1_result} {past_summaries}",
+                "Step3: {step2_result} {customer_id} {call_date}",
+            ]
+            mock_read_s3.return_value = "テスト通話ログ"
 
             # Act
             run_workflow(
@@ -236,13 +258,20 @@ class TestSingleAgentWorkflow:
             patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
             patch("app.workflow.load_prompt") as mock_load_prompt,
+            patch("app.workflow._read_s3_file") as mock_read_s3,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Step completed"
             mock_session_manager = MagicMock()
             mock_create_memory.return_value = mock_session_manager
             mock_get_prefs.return_value = ""
-            mock_load_prompt.return_value = "Test prompt"
+            mock_load_prompt.side_effect = [
+                "System prompt",
+                "Step1: {call_log} {customer_id} {call_date}",
+                "Step2: {step1_result} {past_summaries}",
+                "Step3: {step2_result} {customer_id} {call_date}",
+            ]
+            mock_read_s3.return_value = "テスト通話ログ"
 
             # Act
             run_workflow(
@@ -262,34 +291,37 @@ class TestSingleAgentWorkflow:
 
     def test_run_workflow_passes_s3_info_to_first_step(self):
         """
-        S3情報が最初のステップに渡されることを確認。
+        通話ログが最初のステップに渡されることを確認。
 
-        Step 1のプロンプトにバケット名とキーが含まれることを検証する。
+        Step 1のプロンプトに通話ログ内容が含まれることを検証する。
         """
         from app.workflow import run_workflow
 
         # Arrange
-        s3_info = {"bucket": "my-test-bucket", "key": "data/report.txt"}
+        s3_info = {"bucket": "my-test-bucket", "key": "data/call-log.txt"}
         memory_id = "test-memory-id"
         actor_id = "test-actor"
         session_id = "test-session"
+        mock_call_log = "顧客: 来月引っ越すことになりました"
 
         with (
             patch("app.workflow.Agent") as mock_agent_class,
             patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
             patch("app.workflow.load_prompt") as mock_load_prompt,
+            patch("app.workflow._read_s3_file") as mock_read_s3,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Step completed"
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
+            mock_read_s3.return_value = mock_call_log
             # 各プロンプトに適切なプレースホルダーを設定
             mock_load_prompt.side_effect = [
                 "System prompt",
-                "Read S3 file: {bucket}/{key}",  # step1
-                "Analyze memory: {memory_id}/{actor_id}",  # step2
-                "Generate profile: {past_preferences}",  # step3
+                "Detect events: {call_log} customer={customer_id} date={call_date}",  # step1
+                "Analyze patterns: {step1_result} history={past_summaries}",  # step2
+                "Generate recommendations: {step2_result} customer={customer_id} date={call_date}",  # step3
             ]
 
             # Act
@@ -301,16 +333,16 @@ class TestSingleAgentWorkflow:
             )
 
             # Assert
-            # 最初のエージェント呼び出しにS3情報が含まれることを確認
+            # 最初のエージェント呼び出しに通話ログが含まれることを確認
             first_call_args = mock_agent_instance.call_args_list[0][0][0]
-            assert "my-test-bucket" in first_call_args
-            assert "data/report.txt" in first_call_args
+            assert mock_call_log in first_call_args
+            assert actor_id in first_call_args
 
     def test_run_workflow_returns_final_result(self):
         """
         ワークフローが最終ステップの結果を返すことを確認。
 
-        Step 3（プロファイル生成）の結果が返されることを検証する。
+        Step 3（レコメンド生成）の結果が返されることを検証する。
         """
         from app.workflow import run_workflow
 
@@ -325,17 +357,24 @@ class TestSingleAgentWorkflow:
             patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
             patch("app.workflow.load_prompt") as mock_load_prompt,
+            patch("app.workflow._read_s3_file") as mock_read_s3,
         ):
             mock_agent_instance = mock_agent_class.return_value
             # 各ステップの返り値を設定
             mock_agent_instance.side_effect = [
-                "Step 1: File summarized",
+                "Step 1: Life event detected",
                 "Step 2: Patterns analyzed",
-                "Step 3: User profile generated",
+                "Step 3: Recommendations generated",
             ]
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
-            mock_load_prompt.return_value = "Test prompt"
+            mock_load_prompt.side_effect = [
+                "System prompt",
+                "Step1: {call_log} {customer_id} {call_date}",
+                "Step2: {step1_result} {past_summaries}",
+                "Step3: {step2_result} {customer_id} {call_date}",
+            ]
+            mock_read_s3.return_value = "テスト通話ログ"
 
             # Act
             result = run_workflow(
@@ -347,11 +386,11 @@ class TestSingleAgentWorkflow:
 
             # Assert
             # 最終ステップの結果が返されることを確認
-            assert "Step 3" in result or "profile" in result.lower()
+            assert "Step 3" in result or "recommendation" in result.lower()
 
     def test_run_workflow_retrieves_past_preferences(self):
         """
-        ワークフロー実行時に過去の嗜好が取得されることを確認。
+        ワークフロー実行時に過去の検出履歴が取得されることを確認。
 
         get_past_preferences関数が呼ばれることを検証する。
         """
@@ -368,12 +407,19 @@ class TestSingleAgentWorkflow:
             patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
             patch("app.workflow.load_prompt") as mock_load_prompt,
+            patch("app.workflow._read_s3_file") as mock_read_s3,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Step completed"
             mock_create_memory.return_value = "mock-session-manager"
-            mock_get_prefs.return_value = "ユーザーはPythonを好む傾向"
-            mock_load_prompt.return_value = "Test prompt"
+            mock_get_prefs.return_value = "過去に結婚イベントを検出"
+            mock_load_prompt.side_effect = [
+                "System prompt",
+                "Step1: {call_log} {customer_id} {call_date}",
+                "Step2: {step1_result} {past_summaries}",
+                "Step3: {step2_result} {customer_id} {call_date}",
+            ]
+            mock_read_s3.return_value = "テスト通話ログ"
 
             # Act
             run_workflow(
@@ -407,12 +453,19 @@ class TestSingleAgentWorkflow:
             patch("app.workflow.create_memory") as mock_create_memory,
             patch("app.workflow.get_past_preferences") as mock_get_prefs,
             patch("app.workflow.load_prompt") as mock_load_prompt,
+            patch("app.workflow._read_s3_file") as mock_read_s3,
         ):
             mock_agent_instance = mock_agent_class.return_value
             mock_agent_instance.return_value = "Step completed"
             mock_create_memory.return_value = "mock-session-manager"
             mock_get_prefs.return_value = ""
-            mock_load_prompt.return_value = "Test prompt"
+            mock_load_prompt.side_effect = [
+                "System prompt",
+                "Step1: {call_log} {customer_id} {call_date}",
+                "Step2: {step1_result} {past_summaries}",
+                "Step3: {step2_result} {customer_id} {call_date}",
+            ]
+            mock_read_s3.return_value = "テスト通話ログ"
 
             # Act
             run_workflow(
