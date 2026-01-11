@@ -47,81 +47,81 @@ Step 1で検出されたライフイベントを、過去の検出履歴と照�
 以下のJSON形式で出力してください。**JSONのみを出力し、他の説明は含めないでください。**
 
 ```json
-{
+{{
   "customer_id": "顧客ID",
-  "current_event": {
+  "current_event": {{
     "event_type": "今回検出されたイベント",
     "confidence": "確度"
-  },
-  "historical_context": {
+  }},
+  "historical_context": {{
     "previous_events": [
-      {
+      {{
         "date": "過去の検出日",
         "event_type": "過去のイベント種別",
         "confidence": "確度"
-      }
+      }}
     ],
     "pattern_analysis": "パターン分析の結果（1〜2文）"
-  },
+  }},
   "is_new_event": true,
   "related_to_previous": false
-}
+}}
 ```
 
 ### 出力例
 
 **過去の履歴があり、関連パターンが検出された場合:**
 ```json
-{
+{{
   "customer_id": "C-98765",
-  "current_event": {
+  "current_event": {{
     "event_type": "引っ越し",
     "confidence": "high"
-  },
-  "historical_context": {
+  }},
+  "historical_context": {{
     "previous_events": [
-      {"date": "2024-06-15", "event_type": "結婚", "confidence": "high"}
+      {{"date": "2024-06-15", "event_type": "結婚", "confidence": "high"}}
     ],
     "pattern_analysis": "結婚後約7ヶ月での引っ越し。新婚による新居への移転と推測される。"
-  },
+  }},
   "is_new_event": true,
   "related_to_previous": true
-}
+}}
 ```
 
 **過去の履歴がない場合:**
 ```json
-{
+{{
   "customer_id": "C-10001",
-  "current_event": {
+  "current_event": {{
     "event_type": "引っ越し",
     "confidence": "high"
-  },
-  "historical_context": {
+  }},
+  "historical_context": {{
     "previous_events": [],
     "pattern_analysis": "初回検出のため、過去のパターンは不明。新規イベントとして記録。"
-  },
+  }},
   "is_new_event": true,
   "related_to_previous": false
-}
+}}
 ```
 
 **複数イベントが同時検出された場合:**
 ```json
-{
+{{
   "customer_id": "C-10015",
-  "current_event": {
+  "current_event": {{
     "event_types": ["就職・転職", "引っ越し"],
     "confidence": "high"
-  },
-  "historical_context": {
+  }},
+  "historical_context": {{
     "previous_events": [],
     "pattern_analysis": "転職に伴う引っ越し。キャリアの転換期と生活環境の変化が同時発生。"
-  },
+  }},
   "is_new_event": true,
   "related_to_previous": false,
   "event_correlation": "転職が引っ越しのトリガー。両イベントは強く関連している。"
-}
+}}
 ```
 
 ## 注意事項

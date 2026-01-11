@@ -47,48 +47,48 @@ Step 2のパターン分析結果に基づいて、顧客へのサービス提�
 以下のJSON形式で出力してください。**JSONのみを出力し、他の説明は含めないでください。**
 
 ```json
-{
+{{
   "customer_id": "顧客ID",
   "call_date": "通話日",
   "recommendations": [
-    {
+    {{
       "action": "推奨アクション",
       "priority": "high/medium/low",
       "reason": "推奨理由（1文）"
-    }
+    }}
   ],
   "life_stage_summary": "顧客のライフステージ要約"
-}
+}}
 ```
 
 ### 出力例
 
 **単一イベントの場合:**
 ```json
-{
+{{
   "customer_id": "C-10001",
   "call_date": "2025-01-10",
   "recommendations": [
-    {"action": "光回線移転手続きの案内", "priority": "high", "reason": "顧客から移転の問い合わせあり"},
-    {"action": "でんき・ガスセット割の提案", "priority": "medium", "reason": "新居でのインフラ一括契約の機会"},
-    {"action": "引越し特典キャンペーンの案内", "priority": "low", "reason": "引越し時期の顧客向けキャンペーン"}
+    {{"action": "光回線移転手続きの案内", "priority": "high", "reason": "顧客から移転の問い合わせあり"}},
+    {{"action": "でんき・ガスセット割の提案", "priority": "medium", "reason": "新居でのインフラ一括契約の機会"}},
+    {{"action": "引越し特典キャンペーンの案内", "priority": "low", "reason": "引越し時期の顧客向けキャンペーン"}}
   ],
   "life_stage_summary": "転居準備期"
-}
+}}
 ```
 
 **複数イベント関連の場合:**
 ```json
-{
+{{
   "customer_id": "C-98765",
   "call_date": "2025-01-10",
   "recommendations": [
-    {"action": "光回線セット提案", "priority": "high", "reason": "新居への引っ越しに伴う新規契約機会"},
-    {"action": "でんき・ガスセット割", "priority": "medium", "reason": "引っ越し先でのインフラ一括契約"},
-    {"action": "家族割継続確認", "priority": "low", "reason": "結婚済み顧客のため家族割の適用状況確認"}
+    {{"action": "光回線セット提案", "priority": "high", "reason": "新居への引っ越しに伴う新規契約機会"}},
+    {{"action": "でんき・ガスセット割", "priority": "medium", "reason": "引っ越し先でのインフラ一括契約"}},
+    {{"action": "家族割継続確認", "priority": "low", "reason": "結婚済み顧客のため家族割の適用状況確認"}}
   ],
   "life_stage_summary": "新婚期・新生活開始"
-}
+}}
 ```
 
 ### ライフステージ要約の例
