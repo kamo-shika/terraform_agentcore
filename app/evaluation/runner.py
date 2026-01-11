@@ -42,12 +42,12 @@ def _create_task_function():
         Step 1のタスクを実行する。
 
         Args:
-            case: テストケース（入力にs3_infoとfile_contentを含む）
+            case: テストケース（入力にcall_log, customer_id, call_dateを含む）
 
         Returns:
-            要約結果の文字列
+            ライフイベント検出結果の文字列
         """
-        # エージェントを作成（ツールなしで直接要約）
+        # エージェントを作成（ツールなしで直接分析）
         # Nova 2 Liteはmax_tokensの明示的な設定が必要
         bedrock_model = BedrockModel(
             model_id=MODEL_ID,
@@ -57,21 +57,25 @@ def _create_task_function():
         agent = Agent(
             model=bedrock_model,
             system_prompt=system_prompt,
-            tools=[],  # 評価時はツールなしで直接ファイル内容を渡す
+            tools=[],  # 評価時はツールなしで直接通話ログを渡す
             callback_handler=None,  # コールバックを無効化
         )
 
-        # ファイル内容を含むプロンプトを構築
-        file_content = case.input.get("file_content", "")
-        s3_info = case.input.get("s3_info", {})
-        prompt = f"""以下のファイル内容を要約してください。
+        # CS通話ログ分析用のプロンプトを構築
+        call_log = case.input.get("call_log", "")
+        customer_id = case.input.get("customer_id", "")
+        call_date = case.input.get("call_date", "")
 
-ファイル情報:
-- バケット: {s3_info.get('bucket', 'N/A')}
-- キー: {s3_info.get('key', 'N/A')}
+        prompt = f"""以下の通話ログを分析し、顧客のライフイベントを検出してください。
 
-ファイル内容:
-{file_content}
+**通話ログ:**
+```
+{call_log}
+```
+
+**通話メタデータ:**
+- 顧客ID: {customer_id}
+- 通話日: {call_date}
 """
 
         response = agent(prompt)
@@ -142,10 +146,10 @@ def _create_step2_task_function():
         Step 2のタスクを実行する。
 
         Args:
-            case: テストケース（入力にcurrent_summaryとpast_summariesを含む）
+            case: テストケース（入力にcurrent_event, customer_id, past_eventsを含む）
 
         Returns:
-            パターン分析結果の文字列
+            履歴照合・パターン分析結果の文字列
         """
         # エージェントを作成（ツールなしで直接分析）
         # Nova 2 Liteはmax_tokensの明示的な設定が必要
@@ -161,18 +165,35 @@ def _create_step2_task_function():
             callback_handler=None,
         )
 
-        # パターン分析用プロンプトを構築
-        current_summary = case.input.get("current_summary", "")
-        past_summaries = case.input.get("past_summaries", [])
-        past_summaries_text = "\n".join(f"- {s}" for s in past_summaries)
+        # 履歴照合用プロンプトを構築
+        current_event = case.input.get("current_event", {})
+        customer_id = case.input.get("customer_id", "")
+        past_events = case.input.get("past_events", [])
 
-        prompt = f"""以下の情報からパターンを分析してください。
+        # current_eventの情報をJSON形式でフォーマット
+        import json
 
-現在の要約:
-{current_summary}
+        step1_result = json.dumps(current_event, ensure_ascii=False, indent=2)
 
-過去の要約:
+        # past_eventsの情報をフォーマット
+        if past_events:
+            past_summaries_text = json.dumps(past_events, ensure_ascii=False, indent=2)
+        else:
+            past_summaries_text = "なし（初回検出）"
+
+        prompt = f"""Step 1で検出されたライフイベントを、過去の検出履歴と照合し、パターン分析を行ってください。
+
+**顧客ID:** {customer_id}
+
+**今回検出されたイベント（Step 1の結果）:**
+```
+{step1_result}
+```
+
+**過去の検出履歴:**
+```
 {past_summaries_text}
+```
 """
 
         response = agent(prompt)
@@ -243,10 +264,11 @@ def _create_step3_task_function():
         Step 3のタスクを実行する。
 
         Args:
-            case: テストケース（入力にpattern_analysisとpast_preferencesを含む）
+            case: テストケース（入力にevent_type, confidence, timing, customer_id,
+                  life_stage, historical_contextを含む）
 
         Returns:
-            プロファイル生成結果の文字列
+            レコメンド生成結果の文字列
         """
         # エージェントを作成（ツールなしで直接生成）
         # Nova 2 Liteはmax_tokensの明示的な設定が必要
@@ -262,17 +284,43 @@ def _create_step3_task_function():
             callback_handler=None,
         )
 
-        # プロファイル生成用プロンプトを構築
-        pattern_analysis = case.input.get("pattern_analysis", "")
-        past_preferences = case.input.get("past_preferences", "")
+        # レコメンド生成用プロンプトを構築
+        import json
 
-        prompt = f"""以下の情報からユーザープロファイルを生成してください。
+        # 入力から各フィールドを取得
+        event_type = case.input.get("event_type", "")
+        event_types = case.input.get("event_types", [])  # 複数イベントの場合
+        confidence = case.input.get("confidence", "")
+        timing = case.input.get("timing", "")
+        customer_id = case.input.get("customer_id", "")
+        life_stage = case.input.get("life_stage", "")
+        historical_context = case.input.get("historical_context")
 
-パターン分析結果:
-{pattern_analysis}
+        # Step 2の結果をシミュレート
+        step2_result = {
+            "customer_id": customer_id,
+            "current_event": {
+                "event_type": event_type if event_type else event_types,
+                "confidence": confidence,
+                "timing": timing,
+            },
+            "life_stage": life_stage,
+        }
 
-過去の嗜好情報:
-{past_preferences}
+        # historical_contextがある場合は追加
+        if historical_context:
+            step2_result["historical_context"] = historical_context
+
+        step2_result_text = json.dumps(step2_result, ensure_ascii=False, indent=2)
+
+        prompt = f"""Step 2のパターン分析結果に基づいて、顧客へのサービス提案（レコメンド）を生成してください。
+
+**パターン分析結果（Step 2の結果）:**
+```
+{step2_result_text}
+```
+
+**顧客ID:** {customer_id}
 """
 
         response = agent(prompt)

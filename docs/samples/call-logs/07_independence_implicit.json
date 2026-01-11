@@ -7,17 +7,18 @@
   "call_reason": "家族割確認",
   "transcript": [
     {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
-    {"speaker": "customer", "text": "家族割の人数を減らしたいのですが。"},
-    {"speaker": "operator", "text": "家族割のメンバー変更ですね。どなたを外されますか。"},
-    {"speaker": "customer", "text": "娘の分です。今度別の場所に住むことになったので、請求も分けたいんです。"},
-    {"speaker": "operator", "text": "娘様が別居されるんですね。家族割を継続するには、同一住所か別居でも家族証明が必要になります。"},
-    {"speaker": "customer", "text": "もう大人なので、自分で契約して払ってもらおうと思って。"},
-    {"speaker": "operator", "text": "娘様が独自にご契約される形ですね。名義変更と新規契約、どちらがよろしいでしょうか。"},
-    {"speaker": "customer", "text": "新規契約でいいと思います。娘に連絡させますね。"}
+    {"speaker": "customer", "text": "家族割の適用条件について教えていただけますか。"},
+    {"speaker": "operator", "text": "家族割は、同一住所または家族証明書をご提出いただければ適用可能です。"},
+    {"speaker": "customer", "text": "娘の分なんですが、そろそろ別々にした方がいいのかなと思って。"},
+    {"speaker": "operator", "text": "娘様の回線を別契約にされるかどうかのご検討ですね。"},
+    {"speaker": "customer", "text": "ええ、もう社会人ですし、自分のことは自分で管理してほしいなと。"},
+    {"speaker": "operator", "text": "かしこまりました。現在の契約内容を確認いたしますね。"},
+    {"speaker": "customer", "text": "よろしくお願いします。"}
   ],
   "metadata": {
     "event_type": "独立（子供）",
     "detection_type": "implicit",
-    "difficulty": "medium"
+    "difficulty": "medium",
+    "note": "独立を直接言及せず、契約分離の検討から推測が必要"
   }
 }

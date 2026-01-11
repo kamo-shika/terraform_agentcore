@@ -4,19 +4,20 @@
   "call_date": "2025-01-10",
   "call_time": "11:30:00",
   "duration_seconds": 280,
-  "call_reason": "住所変更",
+  "call_reason": "書類送付先確認",
   "transcript": [
     {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
-    {"speaker": "customer", "text": "あの、登録している住所を変更したいのですが。"},
-    {"speaker": "operator", "text": "住所変更のお手続きですね。新しいご住所をお伺いしてもよろしいでしょうか。"},
-    {"speaker": "customer", "text": "神奈川県横浜市青葉区〇〇町1-2-3です。来週から届け先をそちらにしてほしいんです。"},
-    {"speaker": "operator", "text": "かしこまりました。請求書などの送付先も新しい住所に変更されますか。"},
-    {"speaker": "customer", "text": "はい、全部新しい方でお願いします。今の住所にはもういないので。"},
-    {"speaker": "operator", "text": "承知いたしました。住所変更のお手続きを進めさせていただきます。"}
+    {"speaker": "customer", "text": "請求書の届け先について確認したいのですが。"},
+    {"speaker": "operator", "text": "請求書の送付先についてですね。現在登録されている住所をお調べいたします。"},
+    {"speaker": "customer", "text": "実は、最近届いていないような気がして。もしかしたら違う場所に届いているのかもしれません。"},
+    {"speaker": "operator", "text": "ご確認いたします。現在の登録住所は東京都渋谷区〇〇となっておりますが、こちらでよろしいでしょうか。"},
+    {"speaker": "customer", "text": "あ、そっちだと届かないですね。神奈川の方に届くようにしてもらえますか。"},
+    {"speaker": "operator", "text": "かしこまりました。新しい送付先のご住所をお伺いしてもよろしいでしょうか。"}
   ],
   "metadata": {
     "event_type": "引っ越し",
     "detection_type": "implicit",
-    "difficulty": "medium"
+    "difficulty": "medium",
+    "note": "引っ越しを直接言及せず、届け先変更の文脈から推測が必要"
   }
 }
