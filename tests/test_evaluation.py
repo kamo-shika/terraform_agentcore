@@ -386,3 +386,473 @@ class TestStep2Step3PackageExports:
         assert callable(create_step3_cases)
         assert callable(create_step3_evaluators)
         assert callable(run_step3_evaluation)
+
+
+class TestStep1TaskFunction:
+    """Step 1タスク関数のプロンプト構築テスト（TDD Red段階）"""
+
+    def test_task_function_uses_call_log(self):
+        """
+        タスク関数がcall_logをプロンプトに含むことを確認。
+
+        CS通話ログ分析では、file_contentではなくcall_logを使用する。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "call_log": "オペレーター: こんにちは\n顧客: 来月引っ越します",
+                "customer_id": "C-10001",
+                "call_date": "2025-01-10",
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # call_logがプロンプトに含まれることを確認
+            assert "来月引っ越します" in prompt, "call_logの内容がプロンプトに含まれる必要がある"
+
+    def test_task_function_uses_customer_id(self):
+        """
+        タスク関数がcustomer_idをプロンプトに含むことを確認。
+
+        顧客IDは分析のコンテキストとして重要。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "call_log": "オペレーター: こんにちは\n顧客: 来月引っ越します",
+                "customer_id": "C-10001",
+                "call_date": "2025-01-10",
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # customer_idがプロンプトに含まれることを確認
+            assert "C-10001" in prompt, "customer_idがプロンプトに含まれる必要がある"
+
+    def test_task_function_uses_call_date(self):
+        """
+        タスク関数がcall_dateをプロンプトに含むことを確認。
+
+        通話日時は分析のコンテキストとして重要。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "call_log": "オペレーター: こんにちは\n顧客: 来月引っ越します",
+                "customer_id": "C-10001",
+                "call_date": "2025-01-10",
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # call_dateがプロンプトに含まれることを確認
+            assert "2025-01-10" in prompt, "call_dateがプロンプトに含まれる必要がある"
+
+    def test_task_function_does_not_use_s3_info(self):
+        """
+        タスク関数がs3_infoを使用しないことを確認。
+
+        CS通話ログ分析では、S3ファイルではなく直接call_logを使用する。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "call_log": "オペレーター: こんにちは\n顧客: 来月引っ越します",
+                "customer_id": "C-10001",
+                "call_date": "2025-01-10",
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # s3_infoがプロンプトに含まれないことを確認
+            assert "バケット" not in prompt, "S3バケット情報はプロンプトに含まれてはいけない"
+            assert "キー" not in prompt, "S3キー情報はプロンプトに含まれてはいけない"
+
+
+class TestStep2TaskFunction:
+    """Step 2タスク関数のプロンプト構築テスト（TDD Red段階）"""
+
+    def test_task_function_uses_current_event(self):
+        """
+        タスク関数がcurrent_event情報を使用することを確認。
+
+        Step 2では、検出されたライフイベント情報を使用する。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_step2_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "current_event": {
+                    "event_type": "引っ越し",
+                    "timing": "1ヶ月以内",
+                    "confidence": "high",
+                    "evidence": "来月引っ越すことになったので",
+                },
+                "customer_id": "C-10001",
+                "past_events": [],
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_step2_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # current_eventの情報がプロンプトに含まれることを確認
+            assert "引っ越し" in prompt, "イベントタイプがプロンプトに含まれる必要がある"
+            assert "1ヶ月以内" in prompt, "タイミング情報がプロンプトに含まれる必要がある"
+
+    def test_task_function_uses_past_events(self):
+        """
+        タスク関数がpast_events情報を使用することを確認。
+
+        Step 2では、過去のライフイベント履歴と照合する。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_step2_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "current_event": {
+                    "event_type": "引っ越し",
+                    "timing": "1ヶ月以内",
+                    "confidence": "high",
+                    "evidence": "来月引っ越すことになったので",
+                },
+                "customer_id": "C-10001",
+                "past_events": [
+                    {
+                        "date": "2024-06-15",
+                        "event_type": "結婚",
+                        "confidence": "high",
+                    }
+                ],
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_step2_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # past_eventsの情報がプロンプトに含まれることを確認
+            assert "結婚" in prompt, "過去のイベント情報がプロンプトに含まれる必要がある"
+            assert "2024-06-15" in prompt, "過去のイベント日付がプロンプトに含まれる必要がある"
+
+    def test_task_function_uses_customer_id(self):
+        """
+        タスク関数がcustomer_idを使用することを確認。
+
+        顧客IDは履歴照合のコンテキストとして重要。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_step2_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "current_event": {
+                    "event_type": "引っ越し",
+                    "timing": "1ヶ月以内",
+                    "confidence": "high",
+                    "evidence": "来月引っ越すことになったので",
+                },
+                "customer_id": "C-10001",
+                "past_events": [],
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_step2_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # customer_idがプロンプトに含まれることを確認
+            assert "C-10001" in prompt, "customer_idがプロンプトに含まれる必要がある"
+
+
+class TestStep3TaskFunction:
+    """Step 3タスク関数のプロンプト構築テスト（TDD Red段階）"""
+
+    def test_task_function_uses_step2_result(self):
+        """
+        タスク関数がStep 2の結果情報を使用することを確認。
+
+        Step 3では、Step 2のパターン分析結果を基にレコメンドを生成する。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_step3_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "event_type": "引っ越し",
+                "confidence": "high",
+                "timing": "1ヶ月以内",
+                "customer_id": "C-10001",
+                "life_stage": "転居準備期",
+                "historical_context": None,
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_step3_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # Step 2の結果情報がプロンプトに含まれることを確認
+            assert "引っ越し" in prompt, "イベントタイプがプロンプトに含まれる必要がある"
+            assert "転居準備期" in prompt, "ライフステージ情報がプロンプトに含まれる必要がある"
+
+    def test_task_function_uses_customer_id(self):
+        """
+        タスク関数がcustomer_idを含むことを確認。
+
+        顧客IDはレコメンド生成のコンテキストとして重要。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_step3_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "event_type": "引っ越し",
+                "confidence": "high",
+                "timing": "1ヶ月以内",
+                "customer_id": "C-10001",
+                "life_stage": "転居準備期",
+                "historical_context": None,
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_step3_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # customer_idがプロンプトに含まれることを確認
+            assert "C-10001" in prompt, "customer_idがプロンプトに含まれる必要がある"
+
+    def test_task_function_uses_historical_context_when_present(self):
+        """
+        タスク関数がhistorical_contextが存在する場合に使用することを確認。
+
+        履歴コンテキストがある場合は、より詳細なレコメンドが可能。
+        """
+        from unittest.mock import MagicMock, patch
+
+        from strands_evals import Case
+
+        from app.evaluation.runner import _create_step3_task_function
+
+        # テストケースを作成
+        test_case = Case[dict, str](
+            name="test-case",
+            input={
+                "event_type": "引っ越し",
+                "confidence": "high",
+                "timing": "1ヶ月以内",
+                "customer_id": "C-20001",
+                "life_stage": "新婚期・新生活開始",
+                "historical_context": {
+                    "previous_events": [{"date": "2024-06-15", "event_type": "結婚"}],
+                    "pattern": "結婚→引っ越し",
+                },
+            },
+            expected_output="テスト",
+        )
+
+        # エージェントをモック化してプロンプトをキャプチャ
+        task_function = _create_step3_task_function()
+
+        with patch("app.evaluation.runner.Agent") as mock_agent_class:
+            mock_agent_instance = MagicMock()
+            mock_agent_class.return_value = mock_agent_instance
+            mock_agent_instance.return_value = "モックレスポンス"
+
+            # タスク関数を実行
+            task_function(test_case)
+
+            # エージェントが呼び出されたプロンプトを取得
+            call_args = mock_agent_instance.call_args
+            assert call_args is not None, "エージェントが呼び出されていない"
+            prompt = call_args[0][0]
+
+            # historical_contextの情報がプロンプトに含まれることを確認
+            assert "結婚" in prompt, "履歴コンテキストの過去イベントがプロンプトに含まれる必要がある"
+            assert "結婚→引っ越し" in prompt, "パターン情報がプロンプトに含まれる必要がある"

@@ -9,15 +9,16 @@
     {"speaker": "operator", "text": "お電話ありがとうございます。〇〇通信カスタマーサポートでございます。"},
     {"speaker": "customer", "text": "モバイルWi-Fiのレンタルって、やっていますか？"},
     {"speaker": "operator", "text": "はい、ポケットWi-Fiのレンタルサービスがございます。どのような用途でご検討でしょうか。"},
-    {"speaker": "customer", "text": "来月から新しい職場に通うことになったんですが、通勤時間が長くなるので、電車の中でも仕事したいんです。"},
-    {"speaker": "operator", "text": "通勤中のお仕事用ですね。月額3,980円で無制限プランがございます。"},
-    {"speaker": "customer", "text": "研修期間中は特に使いそうなので、とりあえず3ヶ月契約できますか？"},
+    {"speaker": "customer", "text": "来月から通勤時間が長くなりそうで、移動中にパソコン使いたいんです。"},
+    {"speaker": "operator", "text": "通勤中のご利用ですね。月額3,980円で無制限プランがございます。"},
+    {"speaker": "customer", "text": "しばらくは覚えることも多いので、とりあえず3ヶ月くらい契約できますか？"},
     {"speaker": "operator", "text": "はい、3ヶ月からのご契約が可能です。"},
     {"speaker": "customer", "text": "じゃあお願いします。"}
   ],
   "metadata": {
     "event_type": "就職・転職",
     "detection_type": "implicit",
-    "difficulty": "medium"
+    "difficulty": "medium",
+    "note": "転職を直接言及せず、通勤時間の変化と学習ニーズから推測が必要"
   }
 }
